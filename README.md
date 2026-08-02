@@ -68,6 +68,58 @@ to reintroduce — a single armed seek, source-freshness tracking, a play-token
 guard, an 80 ms loop-edge re-entrancy guard, and an idempotent word-gap timer.
 They are documented in the class docblock; read it before changing playback.
 
+## Annotation layers
+
+Two static layers mark the Arabic text. Both are **annotation only** — they add
+visual marking around text rendered exactly as the content API returns it, and
+never modify, replace or reorder it.
+
+- **Recurring phrases (mutashabihat).** Spans that recur near-identically
+  elsewhere get an underline and an occurrence count; tapping lists every
+  location, flagging the ones whose wording differs (the actual wrong-turn
+  trap). Source: the QUL Mutashabihat dataset — 814 phrase groups, from 2 to 70
+  occurrences each.
+- **Confusable words (near-twins).** Words that look almost identical to
+  another word but do not share a lemma get a dotted underline; tapping shows
+  both forms side by side. Source: the QuranMorph corpus.
+
+Both are preprocessed once into per-surah lookups keyed to
+`surah:verse:word_position` — the same addressing already used for audio
+timing, so they attach to existing word elements rather than needing a separate
+rendering path. Nothing is fetched from a third party at runtime.
+
+```bash
+node scripts/build-annotations.mjs --src <dir>   # writes public/data/annotations/*.json
+```
+
+The source datasets are not committed (the corpus alone is 32 MB); `<dir>` must
+contain `Quran/quran-dataset.csv`, `Quran/tagset_translation.csv`,
+`mut/phrases.json` and `mut/phrase_verses.json`. The generated output is
+committed, so a normal build needs no regeneration.
+
+### How confusable pairs are derived, and why they are filtered
+
+The dataset ships no list of confusable pairs; it is derived — compare words on
+the consonant skeleton (diacritics removed), compare their lemmas, and treat
+*similar spelling + different lemma* as a candidate. This is detection logic
+run against vetted linguistic data, not new linguistic judgement.
+
+Taken literally that marks **23.6% of the corpus**, which is noise rather than
+signal. The real hazard is asymmetric: a *rare* form that looks like a
+*familiar* one, so the eye supplies the familiar reading. Restricting to rare
+readings (≤3 occurrences) of content words brings this to **1.46%** — roughly
+one marked word per 70 — and surfaces pairs like مَٰلِكِ / مَّلِكٌ,
+وَعَلَّمَ / وَعَلِمَ and تَظَٰهَرُونَ / تُظَٰهِرُونَ. The threshold lives in
+`RARE_READING_MAX` and is a product decision that should be tested with actual
+huffaz, not a linguistic claim.
+
+**What the app will not assert.** The derivation produces candidates and will
+produce false positives. The app states only what the data supports: the two
+forms, their lemmas, their part of speech, and where each occurs. It does not
+generate an explanation of the difference or of why the confusion matters —
+that is a claim about the meaning of the Quran and requires qualified review.
+The explanation slot renders a deliberate "Study note pending review" state.
+
 ### Word state layering
 
 A word can simultaneously be: currently recited, inside an active span, the
@@ -92,6 +144,26 @@ credentials, so it is called directly from the client.
 - Quran content stays free to access. Any future paid tier applies to original
   tooling only, never to reading or listening.
 
+### Annotation dataset licences — one open item
+
+- **QuranMorph** (Birzeit University SinaLab) — **CC-BY-4.0**, commercial use
+  permitted. Obligations are met in `/credits`: attribution, the paper citation
+  (Akra, Hammouda & Jarrar, 2025), and a link to the licence. The licence also
+  carries a **non-military, non-malicious use** clause, stated on that page.
+
+  ⚠️ The supplied `license.docx` calls the licence CC-BY-4.0 in its text but
+  links to `creativecommons.org/licenses/**by-nd**/4.0/`. BY-ND forbids
+  distributing adaptations, and deriving confusable pairs and reshaping the
+  corpus is plausibly an adaptation. **This contradiction should be resolved
+  in writing with SinaLab before a commercial launch.**
+
+- **QUL Mutashabihat** — licence terms are **still unconfirmed**. The
+  supplementary-features document flags this as an open item, not a cleared
+  one, and no licence file shipped with the data. Terms should be obtained in
+  writing — particularly for commercial use and redistribution — before this
+  layer ships publicly. It is implemented and attributed, but that permission
+  is outstanding.
+
 **Translation note:** the spec asks for Dr. Mustafa Khattab's *The Clear Quran*
 (id 131), but that resource is no longer served by the public v4 API — it is
 absent from `/resources/translations` and `/quran/translations/131` returns an
@@ -109,9 +181,5 @@ questions or on datasets that were not supplied:
 - Progress, revision scheduling, bookmarks and notes
 - Search within the Quran text
 - A translation picker (only one translation is wired)
-- Recurring-phrase (mutashabihat) highlighting — QUL dataset, licence terms
-  **unconfirmed**; must be obtained in writing before shipping
-- Confusable-word study aid — QuranMorph, CC-BY-4.0, cleared but requires
-  attribution and a paper citation in the app once shipped
 - Accounts and cross-device sync
 - Offline storage, which is blocked by the 7-day caching limit above

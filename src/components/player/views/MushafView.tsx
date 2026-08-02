@@ -6,7 +6,7 @@ import { rangeFor, type ViewProps } from "./types";
 
 const BASMALA = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
 
-export function MushafView({ engine, state, onWordTap, selection }: ViewProps) {
+export function MushafView({ engine, state, onWordTap, selection, annFor }: ViewProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const cur = state.verses[state.vIdx];
 
@@ -48,6 +48,7 @@ export function MushafView({ engine, state, onWordTap, selection }: ViewProps) {
                 revealUpTo={0}
                 masked={false}
                 interactive
+                annotations={annFor(v.number)}
                 onWordTap={onWordTap}
                 onMarkTap={(vi) => engine.jumpToVerse(vi)}
               />

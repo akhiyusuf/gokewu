@@ -79,4 +79,6 @@ export const STORAGE_KEYS = {
   loopCount: "hifz.passes",
   chapters: "hifz.chapters",
   recitations: "hifz.recitations",
+  layerPhrases: "hifz.layer.phrases",
+  layerConfusables: "hifz.layer.confusables",
 } as const;

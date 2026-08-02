@@ -11,7 +11,7 @@ const REPEATS = [1, 2, 3, 0];
  * back to stepping word-by-word through the verse, which is the plain
  * pronunciation drill.
  */
-export function WordRangeView({ engine, state, onWordTap, selection }: ViewProps) {
+export function WordRangeView({ engine, state, onWordTap, selection, annFor }: ViewProps) {
   const v = state.verses[state.vIdx];
   if (!v) return null;
 
@@ -92,6 +92,7 @@ export function WordRangeView({ engine, state, onWordTap, selection }: ViewProps
             revealUpTo={0}
             masked={false}
             interactive
+            annotations={annFor(v.number)}
             onWordTap={onWordTap}
           />
         </div>

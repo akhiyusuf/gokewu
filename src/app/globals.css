@@ -2282,3 +2282,417 @@ a {
     font-size: 38px;
   }
 }
+
+/* ==========================================================================
+   Annotation layers — recurring phrases & confusable words
+   Both are annotation only: they mark text rendered exactly as the content
+   API returns it, and never modify or reorder it.
+   ========================================================================== */
+
+:root {
+  --layer-recurring: #4c6ef5;
+  --layer-recurring-wash: rgba(76, 110, 245, 0.07);
+  --layer-recurring-badge: rgba(76, 110, 245, 0.14);
+  --layer-recurring-border: rgba(76, 110, 245, 0.35);
+  --layer-confusable: #c98a16;
+  --layer-confusable-wash: rgba(201, 138, 22, 0.08);
+  --layer-confusable-sel: rgba(201, 138, 22, 0.22);
+  --layer-confusable-border: rgba(201, 138, 22, 0.45);
+}
+[data-theme="dark"] {
+  --layer-recurring: #8aa0ff;
+  --layer-recurring-wash: rgba(108, 140, 255, 0.1);
+  --layer-recurring-badge: rgba(108, 140, 255, 0.18);
+  --layer-recurring-border: rgba(108, 140, 255, 0.4);
+  --layer-confusable: #e5a93a;
+  --layer-confusable-wash: rgba(201, 138, 22, 0.12);
+  --layer-confusable-sel: rgba(201, 138, 22, 0.26);
+  --layer-confusable-border: rgba(201, 138, 22, 0.45);
+}
+
+/*
+ * Channel assignment (ui-requirements §5). Playback states own background and
+ * glyph colour; the annotation layers own the *underline* channel and are
+ * separated from each other by line style:
+ *   recurring phrase  → solid underline (dashed when it's a near-variant)
+ *   confusable word   → dotted underline
+ * They therefore remain readable on top of tajweed colouring, which owns glyph
+ * colour only. Note the confusable accent shares a hue with tajweed ghunnah in
+ * dark mode — the dotted underline, not the colour, is what identifies it.
+ */
+.w.recurring {
+  border-bottom: 2.5px solid var(--layer-recurring);
+  background: var(--layer-recurring-wash);
+  padding-bottom: 2px;
+}
+.w.recurring.recurring-start {
+  border-end-start-radius: 5px;
+}
+.w.recurring.recurring-end {
+  border-end-end-radius: 5px;
+}
+.w.recurring-variant {
+  border-bottom-style: dashed;
+  border-bottom-width: 2px;
+  background: none;
+}
+.w.confusable {
+  border-bottom: 2px dotted var(--layer-confusable);
+  padding-bottom: 3px;
+}
+
+/*
+ * Precedence: an active playback state takes the border channel back, so a
+ * looping span never reads as a recurring phrase. The annotation returns as
+ * soon as the state clears.
+ */
+.w.cur,
+.w.inrange,
+.w.pending {
+  border-bottom-color: transparent;
+}
+.w.inrange {
+  border-bottom-color: var(--action-primary);
+}
+.w.masked {
+  border-bottom: 1px dashed var(--border-default);
+}
+
+.recurring-badge {
+  font-family: var(--font-numeral);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--layer-recurring);
+  background: var(--layer-recurring-badge);
+  border-radius: 5px;
+  padding: 1px 5px;
+  vertical-align: super;
+  margin: 0 2px;
+  cursor: pointer;
+}
+
+/* layer bar */
+.layer-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  flex-wrap: wrap;
+}
+.layer-bar > .lb-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.layer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.layer-chip.on.recurring-chip {
+  background: var(--layer-recurring-wash);
+  border-color: var(--layer-recurring-border);
+  color: var(--layer-recurring);
+  font-weight: 600;
+}
+.layer-chip.on.confusable-chip {
+  background: var(--layer-confusable-wash);
+  border-color: var(--layer-confusable-border);
+  color: var(--layer-confusable);
+  font-weight: 600;
+}
+
+/* callout under the reading text */
+.layer-callout {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  margin-top: 14px;
+  text-align: left;
+  width: 100%;
+}
+.layer-callout.recurring-callout {
+  background: var(--layer-recurring-wash);
+  border: 1px solid var(--layer-recurring-border);
+}
+.layer-callout.confusable-callout {
+  background: var(--layer-confusable-wash);
+  border: 1px solid var(--layer-confusable-border);
+}
+.layer-callout .lc-tile {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.recurring-callout .lc-tile {
+  background: var(--layer-recurring-badge);
+  color: var(--layer-recurring);
+}
+.confusable-callout .lc-tile {
+  background: var(--layer-confusable-sel);
+  color: var(--layer-confusable);
+}
+.layer-callout p {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.layer-callout p b {
+  color: var(--text-primary);
+}
+
+/* ---------- annotation sheets ---------- */
+
+.sheet-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.sheet-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.sheet-tile.recurring-tile {
+  background: var(--layer-recurring-badge);
+  color: var(--layer-recurring);
+}
+.sheet-tile.confusable-tile {
+  background: var(--layer-confusable-sel);
+  color: var(--layer-confusable);
+}
+
+.phrase-hero {
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface-alt);
+  text-align: center;
+}
+.phrase-hero .ar {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  font-size: 28px;
+  color: var(--text-primary);
+}
+.phrase-hero .sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.occ-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  text-align: left;
+}
+.occ-row.here {
+  border: 1.5px solid var(--action-primary);
+  background: var(--tint-primary-08);
+}
+.occ-row .ref {
+  font-family: var(--font-numeral);
+  font-size: 13px;
+  font-weight: 700;
+  width: 44px;
+  flex: none;
+  color: var(--text-secondary);
+}
+.occ-row.here .ref {
+  color: var(--action-primary);
+}
+.occ-row .snippet {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-arabic);
+  direction: rtl;
+  text-align: right;
+  font-size: 19px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.occ-row .snippet .diff {
+  color: var(--layer-recurring);
+}
+.occ-row .here-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--action-primary);
+  flex: none;
+}
+.variant-chip {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--layer-recurring);
+  background: var(--layer-recurring-badge);
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex: none;
+}
+
+/* confusable pair cards */
+.twin-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+.twin-card.this-word {
+  border: 1.5px solid var(--layer-confusable);
+  background: var(--layer-confusable-wash);
+}
+.twin-card .tc-body {
+  flex: 1;
+  min-width: 0;
+}
+.twin-card .kicker {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.twin-card.this-word .kicker {
+  color: var(--layer-confusable);
+}
+.twin-card .glyph {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 2px;
+}
+.twin-card .glyph .ar {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  font-size: 30px;
+  color: var(--text-primary);
+}
+.twin-card .glyph .tr {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.twin-card .gloss {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.twin-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--action-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.twin-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.twin-divider i {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+.twin-divider span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/*
+ * The explanation slot stays empty by design. The dataset supports saying that
+ * two words look alike and have different lemmas; asserting what each means in
+ * context, or why the confusion matters, is a claim about the meaning of the
+ * Quran and needs qualified review before it reaches users.
+ */
+.pending-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  border: 1px dashed var(--border-default);
+  background: var(--bg-surface-alt);
+  text-align: center;
+  color: var(--text-muted);
+}
+.pending-note b {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.pending-note p {
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 250px;
+}
+
+/* popover annotation rows */
+.p-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-default);
+}
+.p-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-button);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+}
+.p-layer-row span {
+  flex: 1;
+  min-width: 0;
+}
+.p-layer-row.recurring-row {
+  background: var(--layer-recurring-wash);
+  color: var(--layer-recurring);
+}
+.p-layer-row.confusable-row {
+  background: var(--layer-confusable-wash);
+  color: var(--layer-confusable);
+}

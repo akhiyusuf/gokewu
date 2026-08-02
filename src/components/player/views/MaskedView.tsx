@@ -10,7 +10,7 @@ import type { ViewProps } from "./types";
  * copy stays neutral and the peek allowance is framed as available help
  * rather than as a penalty.
  */
-export function MaskedView({ engine, state }: ViewProps) {
+export function MaskedView({ engine, state, annFor }: ViewProps) {
   const v = state.verses[state.vIdx];
   if (!v) return null;
 
@@ -53,6 +53,7 @@ export function MaskedView({ engine, state }: ViewProps) {
           revealUpTo={m.maxRev}
           masked
           interactive={false}
+          annotations={annFor(v.number)}
         />
       </div>
 

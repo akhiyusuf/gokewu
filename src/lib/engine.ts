@@ -53,6 +53,8 @@ export interface EngineState {
   wordRepeat: number;
   loopCount: number;
   taj: boolean;
+  /** Static annotation layers (recurring phrases, confusable words). */
+  layers: { phrases: boolean; confusables: boolean };
 
   focusPhrase: number;
   masked: Record<string, MaskState>;
@@ -136,6 +138,10 @@ export class PlaybackEngine {
       wordRepeat: readStorage<number>(STORAGE_KEYS.wordRepeat) ?? 2,
       loopCount: readStorage<number>(STORAGE_KEYS.loopCount) ?? 5,
       taj: !!readStorage<boolean>(STORAGE_KEYS.taj),
+      layers: {
+        phrases: readStorage<boolean>(STORAGE_KEYS.layerPhrases) ?? true,
+        confusables: readStorage<boolean>(STORAGE_KEYS.layerConfusables) ?? true,
+      },
       focusPhrase: 0,
       masked: {},
       relay: null,
@@ -657,6 +663,12 @@ export class PlaybackEngine {
   setTajweed(on: boolean) {
     this.st.taj = on;
     writeStorage(STORAGE_KEYS.taj, on);
+    this.notify();
+  }
+
+  setLayer(layer: "phrases" | "confusables", on: boolean) {
+    this.st.layers = { ...this.st.layers, [layer]: on };
+    writeStorage(layer === "phrases" ? STORAGE_KEYS.layerPhrases : STORAGE_KEYS.layerConfusables, on);
     this.notify();
   }
 

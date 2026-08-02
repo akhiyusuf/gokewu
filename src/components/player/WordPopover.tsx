@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@/components/shared/Icon";
 import { REPEAT_CHOICES } from "@/lib/constants";
+import type { WordAnnotation } from "@/lib/annotations";
 import type { Word } from "@/lib/types";
 
 const WIDTH = 262;
@@ -27,6 +28,9 @@ export function WordPopover({
   onLoopWord,
   onStartRange,
   onClose,
+  annotation,
+  onOpenPhrase,
+  onOpenConfusable,
 }: {
   word: Word;
   target: PopoverTarget;
@@ -37,6 +41,9 @@ export function WordPopover({
   onLoopWord: () => void;
   onStartRange: () => void;
   onClose: () => void;
+  annotation?: WordAnnotation;
+  onOpenPhrase: () => void;
+  onOpenConfusable: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; flipped: boolean } | null>(null);
@@ -124,6 +131,29 @@ export function WordPopover({
           <Icon name="brackets" size={14} />
           Start {verb.toLowerCase()} range here
         </button>
+
+        {/* Static annotation layers, when this word carries them. */}
+        {(annotation?.phrase || annotation?.confusable) && (
+          <div className="p-layers">
+            {annotation.phrase && (
+              <button className="p-layer-row recurring-row" onClick={onOpenPhrase}>
+                <Icon name="git-compare" size={14} />
+                <span>
+                  Recurs in {annotation.phrase.n} places
+                  {annotation.phrase.v ? " · variant here" : ""}
+                </span>
+                <Icon name="chevron-left" size={14} />
+              </button>
+            )}
+            {annotation.confusable && (
+              <button className="p-layer-row confusable-row" onClick={onOpenConfusable}>
+                <Icon name="git-compare" size={14} />
+                <span>Looks like {annotation.confusable.with[0]?.w ?? "another word"}</span>
+                <Icon name="chevron-left" size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

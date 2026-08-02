@@ -2,6 +2,7 @@
 
 import { memo, Fragment } from "react";
 import { toArabicNum } from "@/lib/segments";
+import type { WordAnnotation } from "@/lib/annotations";
 import type { Verse } from "@/lib/types";
 import { WordSpan, type MaskPhase } from "./WordSpan";
 
@@ -19,6 +20,8 @@ export interface VerseBlockProps {
   revealUpTo: number;
   masked: boolean;
   interactive: boolean;
+  /** Per-word static annotations, keyed by word position. */
+  annotations?: Map<number, WordAnnotation>;
   onWordTap?: (vIdx: number, pos: number, el: HTMLElement) => void;
   onMarkTap?: (vIdx: number) => void;
 }
@@ -35,6 +38,7 @@ function VerseBlockBase({
   revealUpTo,
   masked,
   interactive,
+  annotations,
   onWordTap,
   onMarkTap,
 }: VerseBlockProps) {
@@ -66,6 +70,7 @@ function VerseBlockBase({
               isPending={pendingPos === w.pos}
               mask={mask}
               interactive={interactive}
+              annotation={annotations?.get(w.pos)}
               onTap={onWordTap}
             />
             {marksAfter.get(w.pos)?.map((mk, i) => (

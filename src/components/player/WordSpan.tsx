@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import { tajToSpans } from "@/lib/tajweed";
+import type { WordAnnotation } from "@/lib/annotations";
 import type { Word } from "@/lib/types";
 
 export type MaskPhase = "hidden" | "revealed" | null;
@@ -31,6 +32,7 @@ export interface WordSpanProps {
   isPending: boolean;
   mask: MaskPhase;
   interactive: boolean;
+  annotation?: WordAnnotation;
   onTap?: (vIdx: number, pos: number, el: HTMLElement) => void;
 }
 
@@ -45,6 +47,7 @@ function WordSpanBase({
   isPending,
   mask,
   interactive,
+  annotation,
   onTap,
 }: WordSpanProps) {
   const cls = ["w"];
@@ -55,6 +58,14 @@ function WordSpanBase({
   if (isPending) cls.push("pending");
   if (mask === "hidden") cls.push("masked");
   if (mask === "revealed") cls.push("revealed");
+  // Annotation layers use their own channels (see globals.css) so they stay
+  // readable underneath the playback states above.
+  if (annotation?.phrase && mask !== "hidden") {
+    cls.push("recurring");
+    if (annotation.phraseStart) cls.push("recurring-start");
+    if (annotation.phraseEnd) cls.push("recurring-end");
+  }
+  if (annotation?.confusable && mask !== "hidden") cls.push("confusable");
 
   const html = mask === "hidden" ? null : inner(word, taj);
 

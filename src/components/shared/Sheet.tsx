@@ -12,11 +12,14 @@ export function Sheet({
   onClose,
   children,
   maxHeight,
+  icon,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   maxHeight?: string;
+  /** Optional leading tile, used by the annotation sheets. */
+  icon?: ReactNode;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -77,7 +80,10 @@ export function Sheet({
       >
         <div className="sheet-handle" />
         <div className="sheet-head">
-          <h3>{title}</h3>
+          <span className="sheet-title-row">
+            {icon}
+            <h3>{title}</h3>
+          </span>
           <button className="icon-btn borderless tap" onClick={onClose} aria-label="Close">
             <Icon name="x" size={19} />
           </button>

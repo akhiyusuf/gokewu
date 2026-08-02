@@ -5,7 +5,7 @@ import { useAppData } from "@/components/providers/AppDataProvider";
 import { VerseBlock } from "../VerseBlock";
 import type { ViewProps } from "./types";
 
-export function RelayView({ engine, state }: ViewProps) {
+export function RelayView({ engine, state, annFor }: ViewProps) {
   const { reciterName } = useAppData();
   const R = state.relay;
   if (!R) return null;
@@ -83,6 +83,7 @@ export function RelayView({ engine, state }: ViewProps) {
             revealUpTo={0}
             masked={false}
             interactive={false}
+            annotations={annFor(v.number)}
           />
         </div>
         {v.translation && <p className="gl">{v.translation}</p>}

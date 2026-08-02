@@ -1,3 +1,4 @@
+import type { WordAnnotation } from "@/lib/annotations";
 import type { EngineState, PlaybackEngine } from "@/lib/engine";
 
 /** In-progress two-step range selection, before it is committed to a loop. */
@@ -12,6 +13,8 @@ export interface ViewProps {
   state: EngineState;
   onWordTap: (vIdx: number, pos: number, el: HTMLElement) => void;
   selection: Selection | null;
+  /** Static annotations for a verse, keyed by word position. */
+  annFor: (verseNumber: number) => Map<number, WordAnnotation> | undefined;
 }
 
 /** Resolves which word span a verse should paint as "in range". */

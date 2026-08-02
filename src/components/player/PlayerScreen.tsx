@@ -7,13 +7,24 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { Icon } from "@/components/shared/Icon";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { loadPassageText } from "@/lib/api";
+import {
+  annotationsForVerse,
+  loadAnnotations,
+  phraseGroupsAt,
+  type ConfusableMark,
+  type SurahAnnotations,
+  type WordAnnotation,
+} from "@/lib/annotations";
 import { PlaybackEngine } from "@/lib/engine";
 import { useEngineState } from "@/lib/usePlaybackEngine";
 import type { Mode, RelayParticipant } from "@/lib/types";
 import { PlayerFooter } from "./PlayerFooter";
 import { PlayerHeader } from "./PlayerHeader";
 import { WordPopover, type PopoverTarget } from "./WordPopover";
+import { LayerBar } from "./LayerBar";
+import { ConfusableSheet } from "./sheets/ConfusableSheet";
 import { ModeSheet } from "./sheets/ModeSheet";
+import { PhraseSheet } from "./sheets/PhraseSheet";
 import { QariSheet } from "./sheets/QariSheet";
 import { RelaySetupSheet } from "./sheets/RelaySetupSheet";
 import { FocusView } from "./views/FocusView";
@@ -58,6 +69,11 @@ export function PlayerScreen({
   const [relaySheet, setRelaySheet] = useState(false);
   const [popover, setPopover] = useState<PopoverTarget | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [ann, setAnn] = useState<SurahAnnotations | null>(null);
+  const [phraseSheet, setPhraseSheet] = useState<{ vIdx: number; pos: number } | null>(null);
+  const [confusableSheet, setConfusableSheet] = useState<{ mark: ConfusableMark; vIdx: number } | null>(
+    null,
+  );
 
   const state = useEngineState(engine);
   const activeReciter = reciterParam ?? reciterId;
@@ -69,6 +85,18 @@ export function PlayerScreen({
   useEffect(() => () => engine.destroy(), [engine]);
 
   useEffect(() => engine.subscribeToast(showToast), [engine, showToast]);
+
+  // Annotation layers are static and shipped with the app. Failure is
+  // non-fatal — they enhance reading, they never gate it.
+  useEffect(() => {
+    let cancelled = false;
+    loadAnnotations(chapter).then((data) => {
+      if (!cancelled) setAnn(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [chapter]);
 
   // Sync the reciter chosen on the picker into app state.
   useEffect(() => {
@@ -145,6 +173,51 @@ export function PlayerScreen({
     return state.verses[popover.vIdx]?.words.find((w) => w.pos === popover.pos) ?? null;
   }, [popover, state.verses]);
 
+  /* ---- annotation layers ---- */
+
+  const annByVerse = useMemo(() => {
+    const map = new Map<number, Map<number, WordAnnotation>>();
+    if (!ann) return map;
+    for (const v of state.verses) {
+      map.set(v.number, annotationsForVerse(ann, v.number, state.layers));
+    }
+    return map;
+  }, [ann, state.verses, state.layers]);
+
+  const annFor = useCallback((verseNumber: number) => annByVerse.get(verseNumber), [annByVerse]);
+
+  /** How many marks fall inside the loaded passage, for the layer chips. */
+  const layerCounts = useMemo(() => {
+    let phrases = 0;
+    let confusables = 0;
+    if (ann) {
+      for (const v of state.verses) {
+        phrases += (ann.phrases[String(v.number)] || []).length;
+        confusables += (ann.confusables[String(v.number)] || []).length;
+      }
+    }
+    return { phrases, confusables };
+  }, [ann, state.verses]);
+
+  const openPhraseSheet = (vIdx: number, pos: number) => {
+    setPopover(null);
+    setPhraseSheet({ vIdx, pos });
+  };
+
+  /** Jump to a verse inside the current passage, or open it as a new passage. */
+  const goToVerse = (verseKey: string) => {
+    const [s, v] = verseKey.split(":").map(Number);
+    if (!s || !v) return;
+    setPhraseSheet(null);
+    setConfusableSheet(null);
+    const idx = state.verses.findIndex((x) => x.key === verseKey);
+    if (idx >= 0) {
+      engine.jumpToVerse(idx);
+      return;
+    }
+    router.push(`/read/${s}?from=${v}&to=${v}${state.reciterId ? `&reciter=${state.reciterId}` : ""}`);
+  };
+
   const setMode = (m: Mode) => {
     setSelection(null);
     setPopover(null);
@@ -217,12 +290,7 @@ export function PlayerScreen({
     );
   }
 
-  const viewProps: ViewProps & { selection: Selection | null } = {
-    engine,
-    state,
-    onWordTap,
-    selection,
-  };
+  const viewProps: ViewProps = { engine, state, onWordTap, selection, annFor };
 
   const body =
     state.mode === "relay" && state.relay?.active ? (
@@ -256,6 +324,14 @@ export function PlayerScreen({
       />
 
       <OfflineBanner />
+
+      {state.mode !== "relay" && (
+        <LayerBar
+          layers={state.layers}
+          counts={layerCounts}
+          onToggle={(layer, on) => engine.setLayer(layer, on)}
+        />
+      )}
 
       {state.pendingLoopStart && !selection && (
         <div className="range-banner">
@@ -321,8 +397,55 @@ export function PlayerScreen({
             setPopover(null);
           }}
           onClose={() => setPopover(null)}
+          annotation={annFor(state.verses[popover.vIdx]?.number ?? -1)?.get(popover.pos)}
+          onOpenPhrase={() => openPhraseSheet(popover.vIdx, popover.pos)}
+          onOpenConfusable={() => {
+            const mark = annFor(state.verses[popover.vIdx]?.number ?? -1)?.get(popover.pos)?.confusable;
+            setPopover(null);
+            if (mark) setConfusableSheet({ mark, vIdx: popover.vIdx });
+          }}
         />
       )}
+
+      {phraseSheet &&
+        (() => {
+          const verse = state.verses[phraseSheet.vIdx];
+          if (!verse) return null;
+          const groups = phraseGroupsAt(ann, verse.number, phraseSheet.pos);
+          if (!groups.length) return null;
+          const mark = groups[0]!.mark;
+          const hereText = verse.words
+            .filter((w) => w.pos >= mark.f && w.pos <= mark.t)
+            .map((w) => w.ar)
+            .join(" ");
+          return (
+            <PhraseSheet
+              groups={groups}
+              hereKey={verse.key}
+              hereText={hereText}
+              onGo={goToVerse}
+              onClose={() => setPhraseSheet(null)}
+            />
+          );
+        })()}
+
+      {confusableSheet &&
+        (() => {
+          const verse = state.verses[confusableSheet.vIdx];
+          if (!verse) return null;
+          const word = verse.words.find((w) => w.pos === confusableSheet.mark.p);
+          return (
+            <ConfusableSheet
+              mark={confusableSheet.mark}
+              verseKey={verse.key}
+              gloss={word?.gloss}
+              transliteration={word?.tr}
+              onPlayWord={() => engine.playWordOneshot(confusableSheet.vIdx, confusableSheet.mark.p)}
+              onGo={goToVerse}
+              onClose={() => setConfusableSheet(null)}
+            />
+          );
+        })()}
 
       {modeSheet && (
         <ModeSheet
