@@ -1752,11 +1752,18 @@ a {
 /* The blank keeps the word's real width so the shape of the verse reads
    without revealing its content (ui-requirements §3.5). */
 .w.masked {
+  /* Keeping the real text (transparent) preserves each word's true width, so
+     the shape of the verse reads without revealing its content. The line-height
+     is pinned so the blank sits at glyph height rather than inheriting the
+     verse's 2.1 leading and becoming a tall slab. */
+  display: inline-block;
   color: transparent;
   background: var(--bg-surface-alt);
   border: 1px dashed var(--border-default);
   border-radius: 8px;
   padding: 0 4px;
+  line-height: 1.3;
+  vertical-align: middle;
   cursor: default;
 }
 .w.masked .tj {
