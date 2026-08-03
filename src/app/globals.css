@@ -2261,16 +2261,52 @@ a {
   font-weight: 500;
 }
 
-/* ---------- responsive: tablet & desktop ----------
-   The design supplies a 1280px three-column reading layout. Below 900px the
-   app stays the single mobile column it was designed as. */
-@media (min-width: 900px) {
+/* ==========================================================================
+   Responsive — tablet (834px) and desktop (1440px)
+
+   The governing rule from the design: "Arabic measure caps at 700px at every
+   width. Extra width buys margin and rails — never longer lines." A 1300px
+   Arabic line is unreadable, so wider viewports add surrounding structure
+   rather than stretching the text.
+   ========================================================================== */
+
+:root {
+  --measure-arabic: 700px;
+}
+
+.mushaf,
+.trans-card,
+.basmala {
+  max-width: var(--measure-arabic);
+  margin-inline: auto;
+}
+
+@media (min-width: 834px) {
   :root {
-    --shell-max: 760px;
+    --shell-max: 100%;
+  }
+  .shell {
+    max-width: none;
+    border: none;
+  }
+  /* The reading column is centred and capped; the extra width is margin. */
+  .player-body,
+  .picker-body,
+  .picker-head,
+  .picker-search,
+  .picker-foot,
+  .page-nav,
+  .player-head,
+  .layer-bar,
+  .return-bar {
+    padding-inline: max(24px, calc((100% - 760px) / 2));
+  }
+  .return-bar {
+    margin-inline: 0;
   }
   .mushaf {
-    font-size: 31px;
-    line-height: 2.4;
+    font-size: 34px;
+    line-height: 2.5;
   }
   .vmark {
     width: 28px;
@@ -2282,6 +2318,101 @@ a {
   }
   .masked-verse {
     font-size: 38px;
+  }
+  /* Sheets stop growing with the viewport — past ~560px the From/To fields
+     drift too far apart to read as a pair. */
+  .sheet {
+    max-width: 560px;
+    padding-inline: 24px;
+  }
+  /* Transport becomes a floating pill rather than a full-width bar. */
+  .player-foot {
+    /* auto inline margins on a column flex item shrink it to content, so the
+       width is set explicitly and the item is centred instead */
+    align-self: center;
+    width: min(640px, calc(100% - 32px));
+    max-width: 640px;
+    margin: 0 0 14px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    padding: 13px 20px calc(13px + env(safe-area-inset-bottom));
+  }
+  .play-btn {
+    width: 58px;
+    height: 58px;
+  }
+  .tr-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .player-body,
+  .picker-body,
+  .picker-head,
+  .picker-search,
+  .picker-foot,
+  .page-nav,
+  .player-head,
+  .layer-bar,
+  .return-bar {
+    padding-inline: max(32px, calc((100% - 820px) / 2));
+  }
+  .mushaf {
+    font-size: 33px;
+    line-height: 2.55;
+  }
+  /* Docked bar, not a pill: at this width the pill reads as a floating widget. */
+  .player-foot {
+    align-self: stretch;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border: none;
+    border-top: 1px solid var(--border-default);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 16px 32px calc(16px + env(safe-area-inset-bottom));
+  }
+  .player-foot > * {
+    max-width: 700px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .play-btn {
+    width: 56px;
+    height: 56px;
+  }
+  .tr-btn {
+    width: 40px;
+    height: 40px;
+  }
+  /* The bottom sheet becomes a centred dialog. */
+  .scrim {
+    align-items: center;
+  }
+  .sheet {
+    max-width: 820px;
+    border-radius: var(--radius-modal);
+    max-height: 82dvh;
+    padding: 22px 28px 24px;
+    box-shadow: 0 24px 60px rgba(60, 40, 20, 0.34);
+    animation: dialogin var(--dur-spring) var(--ease-spring);
+  }
+  .sheet-handle {
+    display: none;
+  }
+  @keyframes dialogin {
+    from {
+      transform: scale(0.97);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
   }
 }
 
