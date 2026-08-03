@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Icon, type IconName } from "@/components/shared/Icon";
-import { MODES } from "@/lib/constants";
+import { MODES, STORAGE_KEYS } from "@/lib/constants";
+import { readStorage } from "@/lib/storage";
 import type { EngineState, PlaybackEngine } from "@/lib/engine";
 import { SeekBar } from "./SeekBar";
 
@@ -21,6 +23,13 @@ export function PlayerFooter({
   onOpenModeSheet: () => void;
 }) {
   const mode = MODES.find((m) => m.id === state.mode) || MODES[1]!;
+  // Read once per mount; the Settings page writes the same key and the footer
+  // remounts whenever a passage opens.
+  const [showTrans] = useState(() => readStorage<boolean>(STORAGE_KEYS.showTranslation) ?? true);
+  const dockVerse =
+    showTrans && state.mode === "verse" && state.style === "mushaf"
+      ? state.verses[state.vIdx]
+      : undefined;
   const isRelay = state.mode === "relay";
   const isWordRange = state.mode === "word";
   const drill = state.wordStep.range;
@@ -44,6 +53,17 @@ export function PlayerFooter({
 
   return (
     <footer className="player-foot">
+      {/* The current verse's meaning stays in view while listening — at the
+          bottom of the scroll it was only ever seen after the fact. */}
+      {dockVerse?.translation && (
+        <div className="trans-dock">
+          <div className="trans-meta">
+            <b>{dockVerse.key.replace(":", " : ")}</b>
+            <span>{state.translationName}</span>
+          </div>
+          <p>{dockVerse.translation}</p>
+        </div>
+      )}
       {chip && (
         <div className="loop-chip">
           <Icon name="repeat" size={15} style={{ color: "var(--action-primary)", flex: "none" }} />

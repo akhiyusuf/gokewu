@@ -3417,3 +3417,49 @@ a {
   line-height: 1.45;
   color: var(--text-muted);
 }
+
+/* the space between two words of the same recurring phrase carries the
+   marker, so the phrase reads as one underlined unit */
+.recurring-join {
+  border-bottom: 4px solid var(--layer-recurring);
+  background: var(--layer-recurring-wash);
+  padding-bottom: 3px;
+}
+.recurring-join.variant {
+  border-bottom-style: dashed;
+  border-bottom-width: 3.5px;
+  background: none;
+}
+.w.recurring {
+  /* rounding lives on the phrase ends, not on every word */
+  border-radius: 0;
+}
+
+/* translation pinned above the transport */
+.trans-dock {
+  padding: 2px 2px 10px;
+  border-bottom: 1px solid var(--border-default);
+  max-height: 104px;
+  overflow-y: auto;
+}
+.trans-dock .trans-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+.trans-dock .trans-meta b {
+  font-family: var(--font-numeral);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--action-primary);
+}
+.trans-dock .trans-meta span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.trans-dock p {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

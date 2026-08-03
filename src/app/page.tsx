@@ -103,6 +103,9 @@ export default function ReadPage() {
           >
             <Icon name="search" size={18} />
           </button>
+          <Link className="icon-btn tap" href="/settings" aria-label="Settings">
+            <Icon name="settings-2" size={18} />
+          </Link>
           <ThemeToggle />
         </div>
       </div>
@@ -275,7 +278,12 @@ export default function ReadPage() {
                       <button
                         key={c.id}
                         className={`index-row${isSel ? " sel" : ""}`}
-                        onClick={() => setSelected(isSel ? null : c.id)}
+                        onClick={() => {
+                          // One tap from the index into setup — the old
+                          // select-then-confirm needed two.
+                          setSelected(c.id);
+                          setPractise(true);
+                        }}
                         aria-pressed={isSel}
                       >
                         <span className="in">{c.id}</span>

@@ -88,4 +88,5 @@ export const STORAGE_KEYS = {
   recitations: "hifz.recitations",
   layerPhrases: "hifz.layer.phrases",
   layerConfusables: "hifz.layer.confusables",
+  showTranslation: "hifz.trans",
 } as const;

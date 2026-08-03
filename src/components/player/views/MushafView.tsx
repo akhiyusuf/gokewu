@@ -65,15 +65,6 @@ export function MushafView({ engine, state, onWordTap, selection, annFor, arrive
           })}
         </div>
 
-        {cur?.translation && (
-          <div className="trans-card">
-            <div className="trans-meta">
-              <b>{cur.key.replace(":", " : ")}</b>
-              <span>{state.translationName}</span>
-            </div>
-            <p>{cur.translation}</p>
-          </div>
-        )}
       </div>
     </div>
   );

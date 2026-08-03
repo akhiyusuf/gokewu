@@ -62,6 +62,12 @@ function VerseBlockBase({
       {verse.words.map((w) => {
         const inRange = rangeStart > 0 && w.pos >= rangeStart && w.pos <= rangeEnd;
         const mask: MaskPhase = masked ? (w.pos <= revealUpTo ? "revealed" : "hidden") : null;
+        // A phrase is one thing, so its marker must be one line: when the next
+        // word continues the same phrase, the joining space is underlined too
+        // instead of leaving a gap at every word boundary.
+        const a = annotations?.get(w.pos);
+        const joinPhrase =
+          !masked && a?.phrase && !a.phraseEnd && !marksAfter.get(w.pos) ? a.phrase : null;
         return (
           <Fragment key={w.pos}>
             <WordSpan
@@ -83,7 +89,8 @@ function VerseBlockBase({
               <span key={i} style={{ color: "var(--text-muted)" }}>
                 {mk}
               </span>
-            ))}{" "}
+            ))}
+            {joinPhrase ? <span className={`recurring-join${joinPhrase.v ? " variant" : ""}`}> </span> : " "}
           </Fragment>
         );
       })}

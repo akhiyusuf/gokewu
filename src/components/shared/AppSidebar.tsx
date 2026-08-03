@@ -11,6 +11,7 @@ import { Icon, type IconName } from "./Icon";
  */
 const NAV: { href: string; label: string; icon: IconName; match: (p: string) => boolean }[] = [
   { href: "/", label: "Read", icon: "book-open", match: (p) => p === "/" || p.startsWith("/read") },
+  { href: "/settings", label: "Settings", icon: "settings-2", match: (p) => p === "/settings" },
   { href: "/credits", label: "Data & attributions", icon: "shield-check", match: (p) => p === "/credits" },
   { href: "/privacy", label: "Privacy", icon: "info", match: (p) => p === "/privacy" },
 ];

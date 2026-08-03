@@ -66,6 +66,7 @@ function WordSpanBase({
   // readable underneath the playback states above.
   if (annotation?.phrase && mask !== "hidden") {
     cls.push("recurring");
+    if (annotation.phrase.v) cls.push("recurring-variant");
     if (annotation.phraseStart) cls.push("recurring-start");
     if (annotation.phraseEnd) cls.push("recurring-end");
   }
