@@ -2486,12 +2486,13 @@ a {
 /*
  * Channel assignment (ui-requirements §5). Playback states own background and
  * glyph colour; the annotation layers own the *underline* channel and are
- * separated from each other by line style:
- *   recurring phrase  → solid underline (dashed when it's a near-variant)
- *   confusable word   → dotted underline
- * They therefore remain readable on top of tajweed colouring, which owns glyph
- * colour only. Note the confusable accent shares a hue with tajweed ghunnah in
- * dark mode — the dotted underline, not the colour, is what identifies it.
+ * separated from each other by colour alone — two solid underlines:
+ *   recurring phrase  → solid blue underline
+ *   confusable word   → solid amber underline
+ * Dotted/dashed line styles were tried and dropped: readers took them for
+ * rendering glitches. Whether a phrase occurrence is a near-variant is shown
+ * in the detail sheet a tap opens, not in the line style. The underlines stay
+ * readable on top of tajweed colouring, which owns glyph colour only.
  */
 .w.recurring {
   /* Weight raised from the original 2.5px: at Arabic reading sizes a thin rule
@@ -2506,13 +2507,8 @@ a {
 .w.recurring.recurring-end {
   border-end-end-radius: 5px;
 }
-.w.recurring-variant {
-  border-bottom-style: dashed;
-  border-bottom-width: 3.5px;
-  background: none;
-}
 .w.confusable {
-  border-bottom: 4px dotted var(--layer-confusable);
+  border-bottom: 4px solid var(--layer-confusable);
   padding-bottom: 3px;
 }
 
@@ -2520,7 +2516,6 @@ a {
    the playback highlight gets a deeper tint and a ring there — the same
    visual language as arrival. */
 .w.cur.recurring,
-.w.cur.recurring-variant,
 .w.cur.confusable {
   background: var(--tint-primary-28);
   box-shadow: 0 0 0 2px var(--action-primary);
@@ -3473,11 +3468,6 @@ a {
   border-bottom: 4px solid var(--layer-recurring);
   background: var(--layer-recurring-wash);
   padding-bottom: 3px;
-}
-.recurring-join.variant {
-  border-bottom-style: dashed;
-  border-bottom-width: 3.5px;
-  background: none;
 }
 .w.recurring {
   /* rounding lives on the phrase ends, not on every word */

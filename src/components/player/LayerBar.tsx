@@ -7,8 +7,8 @@ import { useDismissOnBack } from "@/lib/useDismissOnBack";
 
 /**
  * Controls the density of the static annotation layers, and explains what the
- * markers mean — an unexplained dotted underline reads as a rendering glitch,
- * not a study aid.
+ * markers mean — an unexplained underline reads as a rendering glitch, not a
+ * study aid.
  */
 export function LayerBar({
   layers,
@@ -73,22 +73,9 @@ export function LayerBar({
               <span className="ml-text">
                 <b>Recurring phrase</b>
                 <span>
-                  This exact wording appears in other places in the Quran. Tap it to see every
-                  occurrence.
-                </span>
-              </span>
-            </div>
-            <div className="ml-row">
-              <span className="ml-sample">
-                <span className="w recurring recurring-variant recurring-start recurring-end">
-                  يُبْصِرُونَ
-                </span>
-              </span>
-              <span className="ml-text">
-                <b>Near-variant of a phrase</b>
-                <span>
-                  The phrase recurs elsewhere, but the wording here differs slightly — the classic
-                  wrong-turn point when reciting from memory.
+                  This wording appears in other places in the Quran. Tap it to see every occurrence
+                  — including where the wording differs slightly, the classic wrong-turn point when
+                  reciting from memory.
                 </span>
               </span>
             </div>
