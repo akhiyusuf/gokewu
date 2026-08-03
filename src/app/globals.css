@@ -1303,9 +1303,10 @@ a {
   border-radius: 6px;
   padding: 0 6px;
 }
-.w.cur .tj {
-  color: inherit;
-}
+/* Tajweed rule colours stay visible on the current word: the light tint
+   background leaves them legible, and overriding them erased the very layer
+   the reader switched on. (The old solid-fill highlight needed the override;
+   this design doesn't.) */
 .w.inrange {
   background: var(--tint-primary-12);
   color: var(--action-primary);
@@ -2478,6 +2479,17 @@ a {
   padding-bottom: 3px;
 }
 
+/* On a marked word the plain tint disappeared into the annotation wash, so
+   the playback highlight gets a deeper tint and a ring there — the same
+   visual language as arrival. */
+.w.cur.recurring,
+.w.cur.recurring-variant,
+.w.cur.confusable {
+  background: var(--tint-primary-28);
+  box-shadow: 0 0 0 2px var(--action-primary);
+  border-radius: 6px;
+}
+
 /*
  * Precedence: an active playback state takes the border channel back, so a
  * looping span never reads as a recurring phrase. The annotation returns as
@@ -3462,4 +3474,42 @@ a {
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--text-secondary);
+}
+
+/* marker legend (opened from the Layers bar) */
+.marker-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.marker-legend .ml-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+}
+.marker-legend .ml-sample {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  font-size: 24px;
+  flex: none;
+  min-width: 96px;
+  text-align: center;
+}
+.marker-legend .ml-text {
+  flex: 1;
+  min-width: 0;
+}
+.marker-legend .ml-text b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.marker-legend .ml-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
