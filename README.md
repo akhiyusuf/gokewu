@@ -97,8 +97,13 @@ never modify, replace or reorder it.
   trap). Source: the QUL Mutashabihat dataset — 814 phrase groups, from 2 to 70
   occurrences each.
 - **Confusable words (near-twins).** Words that look almost identical to
-  another word but do not share a lemma get a dotted underline; tapping shows
-  both forms side by side. Source: the QuranMorph corpus.
+  another word but do not share a lemma get an underline in a second colour;
+  tapping shows both forms side by side. Source: the QuranMorph corpus.
+
+Each layer uses **one solid underline**, distinguished by colour alone. Dotted
+and dashed line styles were tried and dropped: readers took them for rendering
+glitches rather than markings. Whether a phrase occurrence differs slightly
+from the others is shown in the detail sheet, not in the line style.
 
 Both are preprocessed once into per-surah lookups keyed to
 `surah:verse:word_position` — the same addressing already used for audio
@@ -140,13 +145,24 @@ The explanation slot renders a deliberate "Study note pending review" state.
 ### Word state layering
 
 A word can simultaneously be: currently recited, inside an active span, the
-pending start of a span, tajweed-coloured, concealed/revealed, or part of a
-completed verse. Each state uses a different visual channel (background tint,
-bottom border, dashed outline, glyph colour, muted colour) so they stay
-distinguishable when they combine. Two further annotation layers — recurring
-phrases and confusable words — are planned; `Word` in `src/lib/types.ts` already
-carries the fields, and they should attach as an additional channel rather than
-reusing an existing one.
+pending start of a span, tajweed-coloured, concealed/revealed, part of a
+completed verse, and marked by either annotation layer. Each state uses a
+different visual channel — background tint, bottom border, dashed outline,
+glyph colour, muted colour, and the annotation underline — so they stay
+distinguishable when they combine.
+
+Where channels collide, the collision is resolved explicitly rather than left
+to cascade order:
+
+- An active playback state takes the border channel back, so a looping span
+  never reads as a recurring phrase; the annotation returns when the state
+  clears.
+- On a marked word the plain tint disappeared into the annotation wash, so the
+  current-word highlight there uses a deeper tint plus a ring.
+- Tajweed colours own glyph colour and stay visible on the highlighted word.
+  Because several of them lose contrast against the orange tint, highlighted
+  words swap in intensified same-hue variants (the `--tjc-*` properties) that
+  clear 3:1 against the composited background.
 
 ## Data & licensing
 
