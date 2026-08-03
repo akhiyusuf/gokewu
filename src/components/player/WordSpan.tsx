@@ -32,6 +32,8 @@ export interface WordSpanProps {
   isPending: boolean;
   mask: MaskPhase;
   interactive: boolean;
+  /** Part of the span the reader was sent to by an annotation link. */
+  isArrived?: boolean;
   annotation?: WordAnnotation;
   onTap?: (vIdx: number, pos: number, el: HTMLElement) => void;
 }
@@ -47,6 +49,7 @@ function WordSpanBase({
   isPending,
   mask,
   interactive,
+  isArrived,
   annotation,
   onTap,
 }: WordSpanProps) {
@@ -58,6 +61,7 @@ function WordSpanBase({
   if (isPending) cls.push("pending");
   if (mask === "hidden") cls.push("masked");
   if (mask === "revealed") cls.push("revealed");
+  if (isArrived) cls.push("arrived");
   // Annotation layers use their own channels (see globals.css) so they stay
   // readable underneath the playback states above.
   if (annotation?.phrase && mask !== "hidden") {
@@ -74,6 +78,7 @@ function WordSpanBase({
     "data-v": vIdx,
     "data-w": word.pos,
     "data-cur": isCur ? "1" : undefined,
+    "data-arrived": isArrived ? "1" : undefined,
   };
 
   // In masked mode the word is not interactive — the mask is the point.

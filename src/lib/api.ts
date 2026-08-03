@@ -195,6 +195,40 @@ export async function loadPassageText(
   return { verses, translationName: tr.name };
 }
 
+/**
+ * Transliteration for a single word, fetched on demand.
+ *
+ * Used by the near-twin comparison so both forms can be sounded out, not just
+ * the one on screen. It is fetched rather than baked into the shipped
+ * annotation data because transliteration is Quran Foundation API content and
+ * is therefore subject to the 7-day caching limit.
+ */
+const translitCache = new Map<string, string>();
+
+export async function fetchWordTransliteration(
+  verseKey: string,
+  wordPosition: number,
+): Promise<string> {
+  const cacheKey = `${verseKey}:${wordPosition}`;
+  const hit = translitCache.get(cacheKey);
+  if (hit !== undefined) return hit;
+  try {
+    const data = await getJSON<{ verse?: { words?: ApiWord[] } }>(
+      `${API_BASE}/verses/by_key/${verseKey}?language=en&words=true&word_fields=text_uthmani`,
+    );
+    const words = (data.verse?.words || []).filter(
+      (w) => (w.char_type_name || w.char_type || "word") === "word",
+    );
+    const match = words.find((w) => w.position === wordPosition);
+    const text = match?.transliteration?.text || "";
+    translitCache.set(cacheKey, text);
+    return text;
+  } catch {
+    translitCache.set(cacheKey, "");
+    return "";
+  }
+}
+
 /** Merge a freshly-loaded audio map into a verse list, parsing segments per verse. */
 export function applyAudioMap(verses: Verse[], map: AudioMap): Verse[] {
   return verses.map((v) => {

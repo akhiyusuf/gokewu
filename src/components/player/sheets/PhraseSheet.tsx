@@ -19,7 +19,13 @@ export function PhraseSheet({
   groups: { id: string; mark: PhraseMark; group: PhraseGroup }[];
   hereKey: string;
   hereText: string;
-  onGo: (verseKey: string) => void;
+  onGo: (
+    verseKey: string,
+    wordFrom?: number,
+    wordTo?: number,
+    matchIndex?: number,
+    matchTotal?: number,
+  ) => void;
   onClose: () => void;
 }) {
   const primary = groups[0];
@@ -80,7 +86,7 @@ export function PhraseSheet({
                   <button
                     key={`${o.k}-${i}`}
                     className={`occ-row${here ? " here" : ""}`}
-                    onClick={() => !here && onGo(o.k)}
+                    onClick={() => !here && onGo(o.k, o.f, o.t, i + 1, group.occ.length)}
                     disabled={here}
                   >
                     <span className="ref">{o.k}</span>

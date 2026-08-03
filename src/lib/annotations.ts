@@ -48,6 +48,8 @@ export interface ConfusablePartner {
   pos: string;
   /** a verse where this other reading occurs */
   at: string;
+  /** word position of that occurrence, so arrival can highlight it */
+  atPos: number;
   /** how many times this reading occurs in the Quran */
   n: number;
 }

@@ -52,6 +52,7 @@
   --tint-primary-12: rgba(232, 89, 12, 0.12);
   --tint-primary-16: rgba(232, 89, 12, 0.16);
   --tint-primary-28: rgba(232, 89, 12, 0.28);
+  --tint-primary-ring: rgba(232, 89, 12, 0.5);
   --tint-primary-border: rgba(232, 89, 12, 0.3);
   --tint-warning-bg: rgba(240, 140, 0, 0.15);
   --tint-warning-border: rgba(240, 140, 0, 0.4);
@@ -121,6 +122,7 @@
   --tint-primary-12: rgba(255, 122, 51, 0.12);
   --tint-primary-16: rgba(255, 122, 51, 0.16);
   --tint-primary-28: rgba(255, 122, 51, 0.28);
+  --tint-primary-ring: rgba(255, 122, 51, 0.55);
   --tint-primary-border: rgba(255, 122, 51, 0.3);
   --badge-beta-bg: #3a2c14;
 
@@ -2321,9 +2323,11 @@ a {
  * dark mode — the dotted underline, not the colour, is what identifies it.
  */
 .w.recurring {
-  border-bottom: 2.5px solid var(--layer-recurring);
+  /* Weight raised from the original 2.5px: at Arabic reading sizes a thin rule
+     disappears under the glyph descenders and readers missed the marking. */
+  border-bottom: 4px solid var(--layer-recurring);
   background: var(--layer-recurring-wash);
-  padding-bottom: 2px;
+  padding-bottom: 3px;
 }
 .w.recurring.recurring-start {
   border-end-start-radius: 5px;
@@ -2333,11 +2337,11 @@ a {
 }
 .w.recurring-variant {
   border-bottom-style: dashed;
-  border-bottom-width: 2px;
+  border-bottom-width: 3.5px;
   background: none;
 }
 .w.confusable {
-  border-bottom: 2px dotted var(--layer-confusable);
+  border-bottom: 4px dotted var(--layer-confusable);
   padding-bottom: 3px;
 }
 
@@ -2695,4 +2699,96 @@ a {
 .p-layer-row.confusable-row {
   background: var(--layer-confusable-wash);
   color: var(--layer-confusable);
+}
+
+/* ---------- arrival from an annotation link ---------- */
+
+/*
+ * Following an occurrence used to drop the reader into the right surah with
+ * nothing indicating which word they came for. The target span is now painted
+ * and pulsed once, and a banner names where they came from.
+ */
+.w.arrived {
+  background: var(--tint-primary-28);
+  color: var(--action-primary);
+  border-radius: 8px;
+  padding: 2px 8px;
+  border-bottom: 4px solid var(--action-primary);
+  /* Static ring, deliberately unanimated — the design carries no motion here,
+     and a pulsing highlight on scripture reads as a notification. */
+  box-shadow: 0 0 0 2.5px var(--tint-primary-ring);
+}
+
+
+/* ---------- return bar (arrived via an annotation link) ---------- */
+
+/*
+ * The reader left a passage mid-session to compare a word elsewhere. This bar
+ * names what they left, promises it is still there, and offers one tap back —
+ * previously the only way back was the browser gesture, and the header's back
+ * button dumped them at the index instead.
+ */
+.return-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--tint-primary-08);
+  border-top: 1px solid var(--tint-primary-border);
+  border-bottom: 1px solid var(--tint-primary-border);
+}
+.rb-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--tint-primary-16);
+  color: var(--action-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.rb-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rb-text b {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.rb-text > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.rb-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: var(--radius-button);
+  background: var(--action-primary);
+  color: var(--text-on-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  flex: none;
+}
+
+.icon-btn.labelled {
+  width: auto;
+  gap: 4px;
+  padding: 0 10px 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.match-chip {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--tint-primary-16);
+  color: var(--action-primary);
+  font-size: 11px;
+  font-weight: 600;
 }

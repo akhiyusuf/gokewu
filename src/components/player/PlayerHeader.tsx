@@ -13,6 +13,8 @@ export function PlayerHeader({
   onStyle,
   onQari,
   onEditRelay,
+  matchLabel = null,
+  backLabel = null,
 }: {
   title: string;
   subtitle?: string;
@@ -22,6 +24,10 @@ export function PlayerHeader({
   onStyle: (s: Style) => void;
   onQari: () => void;
   onEditRelay?: () => void;
+  /** Position within an occurrence list when arrived via an annotation link. */
+  matchLabel?: string | null;
+  /** Names the passage the back button returns to, when it isn't the index. */
+  backLabel?: string | null;
 }) {
   const router = useRouter();
   // The style toggle only applies to Verse and Word range, so it is removed
@@ -32,16 +38,20 @@ export function PlayerHeader({
 
   return (
     <header className="player-head">
+      {/* When the reader followed an annotation link, back returns to the
+          passage they left — and says so — rather than to the index. */}
       <button
-        className="icon-btn sm tap"
-        onClick={() => router.push("/")}
-        aria-label="Back to passage list"
+        className={`icon-btn sm tap${backLabel ? " labelled" : ""}`}
+        onClick={() => (backLabel ? router.back() : router.push("/"))}
+        aria-label={backLabel ? `Back to ${backLabel}` : "Back to passage list"}
       >
         <Icon name="chevron-left" size={19} />
+        {backLabel && <span>{backLabel}</span>}
       </button>
 
       <div className="ttl">
         <h1>{title}</h1>
+        {matchLabel && <span className="match-chip">{matchLabel}</span>}
         {isRelay ? (
           <span className="sub">{subtitle}</span>
         ) : (

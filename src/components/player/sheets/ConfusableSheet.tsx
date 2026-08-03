@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/shared/Icon";
 import { Sheet } from "@/components/shared/Sheet";
+import { fetchWordTransliteration } from "@/lib/api";
 import type { ConfusableMark } from "@/lib/annotations";
 
 /**
@@ -57,10 +59,35 @@ export function ConfusableSheet({
   gloss?: string;
   transliteration?: string;
   onPlayWord: () => void;
-  onGo: (verseKey: string) => void;
+  onGo: (
+    verseKey: string,
+    wordFrom?: number,
+    wordTo?: number,
+    matchIndex?: number,
+    matchTotal?: number,
+  ) => void;
   onClose: () => void;
 }) {
   const twin = mark.with[0];
+
+  /*
+   * Both forms need a transliteration: the whole point is to sound the two out
+   * and hear where they diverge. Showing it only for the word on screen left
+   * the twin unpronounceable to a non-Arabic reader.
+   */
+  const [twinTranslit, setTwinTranslit] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    for (const t of mark.with) {
+      const key = `${t.at}:${t.atPos}`;
+      fetchWordTransliteration(t.at, t.atPos).then((text) => {
+        if (!cancelled && text) setTwinTranslit((prev) => ({ ...prev, [key]: text }));
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [mark]);
 
   return (
     <Sheet
@@ -99,7 +126,7 @@ export function ConfusableSheet({
         <button
           key={i}
           className="twin-card"
-          onClick={() => onGo(t.at)}
+          onClick={() => onGo(t.at, t.atPos, t.atPos, i + 1, mark.with.length)}
           style={{ textAlign: "left", width: "100%" }}
         >
           <span className="tc-body">
@@ -109,6 +136,9 @@ export function ConfusableSheet({
             </span>
             <span className="glyph">
               <span className="ar">{t.w}</span>
+              {twinTranslit[`${t.at}:${t.atPos}`] && (
+                <span className="tr">{twinTranslit[`${t.at}:${t.atPos}`]}</span>
+              )}
             </span>
             {/* Lemma and POS come straight from the corpus; no meaning is asserted. */}
             <span className="gloss">

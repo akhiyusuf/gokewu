@@ -6,7 +6,7 @@ import { rangeFor, type ViewProps } from "./types";
 
 const BASMALA = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
 
-export function MushafView({ engine, state, onWordTap, selection, annFor }: ViewProps) {
+export function MushafView({ engine, state, onWordTap, selection, annFor, arrived }: ViewProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const cur = state.verses[state.vIdx];
 
@@ -21,6 +21,13 @@ export function MushafView({ engine, state, onWordTap, selection, annFor }: View
       el.scrollIntoView({ block: "center", behavior: "smooth" });
     }
   }, [state.curWord, state.vIdx]);
+
+  // Land the reader on the word they followed a link to.
+  useEffect(() => {
+    if (!arrived) return;
+    const el = bodyRef.current?.querySelector<HTMLElement>('[data-arrived="1"]');
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [arrived, state.verses]);
 
   const p = state.passage;
   // Al-Fatiha counts the basmala as verse 1, and At-Tawbah has none.
@@ -49,6 +56,8 @@ export function MushafView({ engine, state, onWordTap, selection, annFor }: View
                 masked={false}
                 interactive
                 annotations={annFor(v.number)}
+                arrivedFrom={arrived?.verse === v.number ? arrived.from : 0}
+                arrivedTo={arrived?.verse === v.number ? arrived.to : 0}
                 onWordTap={onWordTap}
                 onMarkTap={(vi) => engine.jumpToVerse(vi)}
               />

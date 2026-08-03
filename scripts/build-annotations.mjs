@@ -203,7 +203,14 @@ for (const t of words) {
   if (!forms) readingForms.set(rk, (forms = new Map()));
   forms.set(t.w, (forms.get(t.w) || 0) + 1);
   if (!readingMeta.has(rk)) {
-    readingMeta.set(rk, { lemma: t.lemma, first: `${t.s}:${t.v}`, pos: posEn.get(t.pos) || "" });
+    // Word position is kept so a link to the twin can highlight the exact
+    // word on arrival, not just open the verse.
+    readingMeta.set(rk, {
+      lemma: t.lemma,
+      first: `${t.s}:${t.v}`,
+      firstPos: t.p,
+      pos: posEn.get(t.pos) || "",
+    });
   }
 }
 
@@ -227,7 +234,14 @@ for (const t of words) {
     const meta = readingMeta.get(ork);
     if (!forms || !meta) continue;
     const [form, n] = [...forms.entries()].sort((a, b) => b[1] - a[1])[0];
-    others.push({ w: form, lemma: meta.lemma, pos: meta.pos, at: meta.first, n: readingCount.get(ork) || n });
+    others.push({
+      w: form,
+      lemma: meta.lemma,
+      pos: meta.pos,
+      at: meta.first,
+      atPos: meta.firstPos,
+      n: readingCount.get(ork) || n,
+    });
   }
   if (!others.length) continue;
   others.sort((a, b) => b.n - a.n);

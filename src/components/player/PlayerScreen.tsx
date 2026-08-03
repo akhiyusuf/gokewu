@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppData } from "@/components/providers/AppDataProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Icon } from "@/components/shared/Icon";
@@ -16,6 +16,7 @@ import {
   type WordAnnotation,
 } from "@/lib/annotations";
 import { PlaybackEngine } from "@/lib/engine";
+import { useDismissOnBack } from "@/lib/useDismissOnBack";
 import { useEngineState } from "@/lib/usePlaybackEngine";
 import type { Mode, RelayParticipant } from "@/lib/types";
 import { PlayerFooter } from "./PlayerFooter";
@@ -42,18 +43,54 @@ export interface Selection {
   end: number;
 }
 
+export interface FocusTarget {
+  verse: number;
+  from: number;
+  to: number;
+}
+
 export function PlayerScreen({
   chapter,
   from,
   to,
   reciterParam,
+  focus = null,
+  cameFrom = null,
+  heldAt = null,
+  matchOf = null,
 }: {
   chapter: number;
   from: number;
   to: number;
   reciterParam: number | null;
+  /** Word span to land on, set when following an annotation link. */
+  focus?: FocusTarget | null;
+  /** Label of the passage the reader left, e.g. "Ya-Sin 6–9". */
+  cameFrom?: string | null;
+  /** Verse the origin passage is paused at, so the bar can promise nothing is lost. */
+  heldAt?: number | null;
+  /** Position within the occurrence list, as "3-6". */
+  matchOf?: string | null;
 }) {
   const router = useRouter();
+  /*
+   * Read the arrival params on the client. Server-component searchParams do not
+   * reliably propagate on a same-route client navigation, so following an
+   * annotation link changed the URL but left the screen showing the old state.
+   */
+  const search = useSearchParams();
+  const focusParam = search.get("focus");
+  const focusLive = (() => {
+    if (!focusParam) return focus;
+    const [verse, wf, wt] = focusParam.split("-").map(Number);
+    if (!verse) return focus;
+    const f = wf && wf > 0 ? wf : 1;
+    return { verse, from: f, to: wt && wt >= f ? wt : f };
+  })();
+  const cameFromLive = search.get("back") ?? cameFrom;
+  const heldAtLive = search.get("held") ? Number(search.get("held")) : heldAt;
+  const matchOfLive = search.get("match") ?? matchOf;
+
   const { chapters, status: appStatus, reciterId, setReciterId, reciterName, pushRecent } = useAppData();
   const { showToast } = useToast();
 
@@ -70,6 +107,8 @@ export function PlayerScreen({
   const [popover, setPopover] = useState<PopoverTarget | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [ann, setAnn] = useState<SurahAnnotations | null>(null);
+  const [arrived, setArrived] = useState<FocusTarget | null>(focusLive);
+  const focusKey = focusParam ?? "";
   const [phraseSheet, setPhraseSheet] = useState<{ vIdx: number; pos: number } | null>(null);
   const [confusableSheet, setConfusableSheet] = useState<{ mark: ConfusableMark; vIdx: number } | null>(
     null,
@@ -77,6 +116,20 @@ export function PlayerScreen({
 
   const state = useEngineState(engine);
   const activeReciter = reciterParam ?? reciterId;
+
+  // One history entry covers every overlay, so back closes what's open and
+  // leaves the reader on the passage rather than at the index.
+  const overlayOpen = !!(popover || modeSheet || qariSheet || relaySheet || phraseSheet || confusableSheet);
+  const closeOverlays = useCallback(() => {
+    setPopover(null);
+    setModeSheet(false);
+    setQariSheet(false);
+    setRelaySheet(false);
+    setPhraseSheet(null);
+    setConfusableSheet(null);
+  }, []);
+  const navigatingAway = useRef(false);
+  useDismissOnBack(overlayOpen, closeOverlays, navigatingAway);
 
   const chapterMeta = chapters.find((c) => c.id === chapter);
   const passageName = chapterMeta?.name_simple ?? `Surah ${chapter}`;
@@ -173,6 +226,24 @@ export function PlayerScreen({
     return state.verses[popover.vIdx]?.words.find((w) => w.pos === popover.pos) ?? null;
   }, [popover, state.verses]);
 
+  /*
+   * Next reuses this component across navigations within /read/[chapter], so
+   * the initial useState value is stale after following an annotation link.
+   * Sync from the prop instead of relying on a remount.
+   */
+  useEffect(() => {
+    setArrived(focusLive);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusKey]);
+
+  // Position on the focused verse once the passage is ready.
+  useEffect(() => {
+    if (load !== "ready" || !arrived) return;
+    const idx = state.verses.findIndex((v) => v.number === arrived.verse);
+    if (idx >= 0 && idx !== state.vIdx) engine.loadVerseAudio(idx, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, arrived, state.verses.length]);
+
   /* ---- annotation layers ---- */
 
   const annByVerse = useMemo(() => {
@@ -204,18 +275,53 @@ export function PlayerScreen({
     setPhraseSheet({ vIdx, pos });
   };
 
-  /** Jump to a verse inside the current passage, or open it as a new passage. */
-  const goToVerse = (verseKey: string) => {
+  /**
+   * Follow an annotation link to another location. The target word span is
+   * carried in the URL so arrival highlights the actual word — landing in the
+   * right surah but on no particular word made the link feel broken.
+   */
+  const goToOccurrence = (
+    verseKey: string,
+    wordFrom?: number,
+    wordTo?: number,
+    matchIndex?: number,
+    matchTotal?: number,
+  ) => {
     const [s, v] = verseKey.split(":").map(Number);
     if (!s || !v) return;
     setPhraseSheet(null);
     setConfusableSheet(null);
+
+    const wf = wordFrom && wordFrom > 0 ? wordFrom : 0;
+    const wt = wordTo && wordTo >= (wf || 1) ? wordTo : wf;
+
+    // Same passage: reposition in place, no navigation.
     const idx = state.verses.findIndex((x) => x.key === verseKey);
     if (idx >= 0) {
-      engine.jumpToVerse(idx);
+      engine.loadVerseAudio(idx, false);
+      if (wf) setArrived({ verse: v, from: wf, to: wt });
       return;
     }
-    router.push(`/read/${s}?from=${v}&to=${v}${state.reciterId ? `&reciter=${state.reciterId}` : ""}`);
+
+    // Otherwise open the target with a couple of verses of context around it.
+    const ctxFrom = Math.max(1, v - 1);
+    const ctxTo = v + 1;
+    const params = new URLSearchParams({ from: String(ctxFrom), to: String(ctxTo) });
+    if (state.reciterId) params.set("reciter", String(state.reciterId));
+    if (wf) params.set("focus", `${v}-${wf}-${wt}`);
+    // Carry what the reader is leaving, so the return bar can promise it's held.
+    const p = state.passage;
+    if (p) params.set("back", `${p.name} ${p.from}${p.to > p.from ? `–${p.to}` : ""}`);
+    const heldVerse = state.verses[state.vIdx]?.number;
+    if (heldVerse) params.set("held", String(heldVerse));
+    if (matchIndex && matchTotal) params.set("match", `${matchIndex}-${matchTotal}`);
+    /*
+     * `replace`, not `push`: the overlay occupies the current history entry, so
+     * replacing it means back from the destination lands on the passage the
+     * reader left rather than on a re-opened sheet.
+     */
+    navigatingAway.current = true;
+    router.replace(`/read/${s}?${params.toString()}`);
   };
 
   const setMode = (m: Mode) => {
@@ -244,6 +350,26 @@ export function PlayerScreen({
           onQari={() => {}}
         />
         <OfflineBanner />
+        {/* Even when the destination fails, the reader must be able to get
+            back to the passage they left. */}
+        {cameFromLive && (
+          <div className="return-bar">
+            <span className="rb-icon">
+              <Icon name="pause" size={14} />
+            </span>
+            <span className="rb-text">
+              <b>
+                {cameFromLive}
+                {heldAtLive ? ` · held at verse ${heldAtLive}` : ""}
+              </b>
+              <span>Comparing elsewhere — nothing lost</span>
+            </span>
+            <button className="rb-return" onClick={() => router.back()}>
+              <Icon name="corner-up-left" size={14} />
+              Return
+            </button>
+          </div>
+        )}
         <div className="status-block">
           <div className="status-medallion">
             <Icon name="volume-x" size={34} />
@@ -290,7 +416,7 @@ export function PlayerScreen({
     );
   }
 
-  const viewProps: ViewProps = { engine, state, onWordTap, selection, annFor };
+  const viewProps: ViewProps = { engine, state, onWordTap, selection, annFor, arrived };
 
   const body =
     state.mode === "relay" && state.relay?.active ? (
@@ -317,6 +443,8 @@ export function PlayerScreen({
         style={state.style}
         onStyle={(s) => engine.setStyle(s)}
         onQari={() => setQariSheet(true)}
+        matchLabel={matchOfLive ? `Match ${matchOfLive.split("-")[0]} of ${matchOfLive.split("-")[1]}` : null}
+        backLabel={cameFromLive ? cameFromLive.split(" ")[0] : null}
         onEditRelay={() => {
           engine.pauseRelayForEdit();
           setRelaySheet(true);
@@ -331,6 +459,25 @@ export function PlayerScreen({
           counts={layerCounts}
           onToggle={(layer, on) => engine.setLayer(layer, on)}
         />
+      )}
+
+      {arrived && cameFromLive && (
+        <div className="return-bar">
+          <span className="rb-icon">
+            <Icon name="pause" size={14} />
+          </span>
+          <span className="rb-text">
+            <b>
+              {cameFromLive}
+              {heldAtLive ? ` · held at verse ${heldAtLive}` : ""}
+            </b>
+            <span>Comparing elsewhere — nothing lost</span>
+          </span>
+          <button className="rb-return" onClick={() => router.back()}>
+            <Icon name="corner-up-left" size={14} />
+            Return
+          </button>
+        </div>
       )}
 
       {state.pendingLoopStart && !selection && (
@@ -423,7 +570,7 @@ export function PlayerScreen({
               groups={groups}
               hereKey={verse.key}
               hereText={hereText}
-              onGo={goToVerse}
+              onGo={goToOccurrence}
               onClose={() => setPhraseSheet(null)}
             />
           );
@@ -441,7 +588,7 @@ export function PlayerScreen({
               gloss={word?.gloss}
               transliteration={word?.tr}
               onPlayWord={() => engine.playWordOneshot(confusableSheet.vIdx, confusableSheet.mark.p)}
-              onGo={goToVerse}
+              onGo={goToOccurrence}
               onClose={() => setConfusableSheet(null)}
             />
           );

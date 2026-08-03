@@ -15,6 +15,8 @@ export interface ViewProps {
   selection: Selection | null;
   /** Static annotations for a verse, keyed by word position. */
   annFor: (verseNumber: number) => Map<number, WordAnnotation> | undefined;
+  /** Word span the reader was sent to by an annotation link, if any. */
+  arrived: { verse: number; from: number; to: number } | null;
 }
 
 /** Resolves which word span a verse should paint as "in range". */

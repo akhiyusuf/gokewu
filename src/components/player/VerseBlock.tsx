@@ -22,6 +22,9 @@ export interface VerseBlockProps {
   interactive: boolean;
   /** Per-word static annotations, keyed by word position. */
   annotations?: Map<number, WordAnnotation>;
+  /** Word span the reader was sent to, highlighted on arrival. */
+  arrivedFrom?: number;
+  arrivedTo?: number;
   onWordTap?: (vIdx: number, pos: number, el: HTMLElement) => void;
   onMarkTap?: (vIdx: number) => void;
 }
@@ -39,6 +42,8 @@ function VerseBlockBase({
   masked,
   interactive,
   annotations,
+  arrivedFrom = 0,
+  arrivedTo = 0,
   onWordTap,
   onMarkTap,
 }: VerseBlockProps) {
@@ -70,6 +75,7 @@ function VerseBlockBase({
               isPending={pendingPos === w.pos}
               mask={mask}
               interactive={interactive}
+              isArrived={arrivedFrom > 0 && w.pos >= arrivedFrom && w.pos <= arrivedTo}
               annotation={annotations?.get(w.pos)}
               onTap={onWordTap}
             />
