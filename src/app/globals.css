@@ -2365,18 +2365,36 @@ a {
     max-width: 560px;
     padding-inline: 24px;
   }
-  /* Transport becomes a floating pill rather than a full-width bar. */
+  /* Transport becomes a floating card rather than a full-width bar. */
   .player-foot {
     /* auto inline margins on a column flex item shrink it to content, so the
        width is set explicitly and the item is centred instead */
     align-self: center;
-    width: min(640px, calc(100% - 32px));
-    max-width: 640px;
+    /* Sized to the reading column, not narrower than it. At 640px the card sat
+       inside the 760px measure, so mushaf lines scrolling under a sticky
+       footer stayed visible past both ends — read as a rendering fault, not as
+       a deliberate float. Matching the measure covers the column exactly. */
+    width: min(760px, calc(100% - 48px));
+    max-width: 760px;
     margin: 0 0 14px;
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-pill);
+    /* Not --radius-pill. With the translation dock stacked over the seek and
+       transport rows this box is ~200px tall, and a stadium radius resolves to
+       a ~100px semicircle at each end — content cannot use those corners, so
+       the translation name and the outer transport buttons collided with the
+       curve. A card radius is the shape this content actually is. */
+    border-radius: 20px;
     box-shadow: var(--shadow-md);
-    padding: 13px 20px calc(13px + env(safe-area-inset-bottom));
+    padding: 14px 22px calc(14px + env(safe-area-inset-bottom));
+  }
+  /* space-between earns its keep at 375px, where the row is nearly full. Across
+     a ~700px card it flings five small controls to the extremes and reads as
+     scattered, so the cluster is capped and centred under the full-width seek
+     bar instead. */
+  .transport {
+    width: 100%;
+    max-width: 440px;
+    margin-inline: auto;
   }
   .play-btn {
     width: 58px;
@@ -2420,6 +2438,11 @@ a {
     max-width: 700px;
     margin-inline: auto;
     width: 100%;
+  }
+  /* Same specificity as the rule above and later in source, so it has to be
+     restated here or the transport re-widens to 700px and scatters again. */
+  .transport {
+    max-width: 440px;
   }
   .play-btn {
     width: 56px;
