@@ -23,6 +23,13 @@ export const CONTENT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const RATES = [0.75, 1, 1.25, 1.5] as const;
 
+/**
+ * Cache-buster for /data/annotations/*, which is served with a one-year
+ * immutable Cache-Control header (next.config.mjs). Bump this whenever
+ * `scripts/build-annotations.mjs` is re-run against updated datasets.
+ */
+export const ANNOTATIONS_VERSION = 3;
+
 /** Order, names, icons and descriptions follow the hi-fi design's mode sheet. */
 export const MODES: { id: Mode; name: string; icon: string; desc: string }[] = [
   {

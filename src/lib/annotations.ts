@@ -9,6 +9,8 @@
  * reorder the Quran text.
  */
 
+import { ANNOTATIONS_VERSION } from "./constants";
+
 export interface PhraseMark {
   /** phrase-group id */
   g: string;
@@ -94,7 +96,7 @@ export function loadAnnotations(surah: number): Promise<SurahAnnotations | null>
   const hit = inflight.get(surah);
   if (hit) return hit;
 
-  const p = fetch(`/data/annotations/${surah}.json`)
+  const p = fetch(`/data/annotations/${surah}.json?v=${ANNOTATIONS_VERSION}`)
     .then((r) => (r.ok ? (r.json() as Promise<SurahAnnotations>) : null))
     .catch(() => null)
     .then((data) => {

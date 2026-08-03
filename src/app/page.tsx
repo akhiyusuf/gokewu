@@ -2,30 +2,54 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "@/components/providers/AppDataProvider";
+import { PractiseSheet } from "@/components/player/sheets/PractiseSheet";
 import { Icon } from "@/components/shared/Icon";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { Sheet } from "@/components/shared/Sheet";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import type { Chapter } from "@/lib/types";
+import { STORAGE_KEYS } from "@/lib/constants";
+import { computeStreak, greeting, readSessions, relativeTime, type SessionEntry } from "@/lib/sessions";
+import { readStorage, writeStorage } from "@/lib/storage";
+import type { Mode } from "@/lib/types";
 
-export default function PickerPage() {
+/**
+ * The "Read" screen (v2 design). The old picker asked the reader to make every
+ * decision up front — surah, range, reciter — before seeing anything. This one
+ * leads with continuing what they were doing; range and mode moved into the
+ * Practise sheet, chosen right before starting.
+ */
+export default function ReadPage() {
   const router = useRouter();
-  const { chapters, recitations, status, reload, reciterId, setReciterId, reciterName, recents } =
-    useAppData();
+  const { chapters, recitations, status, reload, reciterId, setReciterId, reciterName } = useAppData();
 
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [from, setFrom] = useState(1);
-  const [to, setTo] = useState(1);
+  const [practise, setPractise] = useState(false);
   const [qariSheet, setQariSheet] = useState(false);
+  const [taj, setTaj] = useState(false);
+  const [session, setSession] = useState<SessionEntry | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [eyebrow, setEyebrow] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Local-storage reads happen after mount so SSR and client render agree.
+  useEffect(() => {
+    setSession(readSessions()[0] ?? null);
+    setStreak(computeStreak());
+    setEyebrow(greeting());
+    setTaj(!!readStorage<boolean>(STORAGE_KEYS.taj));
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
 
   const filtered = useMemo(() => {
     const raw = query.trim().toLowerCase();
     if (!raw) return chapters;
-    // Surah names carry hyphens and apostrophes ("Ya-Sin", "Al-An'am"), so
-    // matching is done on a stripped form — typing "yasin" or "anam" works.
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
     const q = norm(raw);
     return chapters.filter(
@@ -39,53 +63,89 @@ export default function PickerPage() {
 
   const selectedChapter = chapters.find((c) => c.id === selected) || null;
 
-  function pickChapter(c: Chapter) {
-    if (selected === c.id) {
-      setSelected(null);
-      return;
-    }
-    setSelected(c.id);
-    setFrom(1);
-    setTo(Math.min(c.verses_count, 3));
-  }
+  const recents = useMemo(() => {
+    const list = readSessions();
+    // The hero already shows the newest session; chips pick up the next two.
+    return list.slice(1, 3);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function open() {
-    if (!selectedChapter || reciterId == null) return;
-    router.push(`/read/${selectedChapter.id}?from=${from}&to=${to}&reciter=${reciterId}`);
-  }
+  const openUrl = (chapter: number, from: number, to: number, extra?: Record<string, string>) => {
+    const p = new URLSearchParams({ from: String(from), to: String(to) });
+    if (reciterId != null) p.set("reciter", String(reciterId));
+    for (const [k, v] of Object.entries(extra || {})) p.set(k, v);
+    return `/read/${chapter}?${p.toString()}`;
+  };
 
-  const ctaLabel = selectedChapter
-    ? `Open player — ${selectedChapter.name_simple} ${from}${to > from ? `–${to}` : ""}`
-    : "Open player";
+  const startPractise = (from: number, to: number, mode: Mode) => {
+    if (!selectedChapter) return;
+    setPractise(false);
+    router.push(openUrl(selectedChapter.id, from, to, mode !== "verse" ? { mode } : {}));
+  };
+
+  const heroTotal = session ? session.to - session.from + 1 : 0;
+  const heroDone = session ? session.verse - session.from + 1 : 0;
 
   return (
     <main className="shell" id="main">
-      <div className="picker-head">
-        <h1>Choose a passage</h1>
-        <ThemeToggle />
+      <div className="read-head">
+        <div className="rh-left">
+          <span className="label-eyebrow" style={{ letterSpacing: "0.12em" }}>
+            {eyebrow || " "}
+          </span>
+          <h1>Read</h1>
+        </div>
+        <div className="rh-actions">
+          <button
+            className="icon-btn tap"
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-label="Search surahs"
+            aria-expanded={searchOpen}
+          >
+            <Icon name="search" size={18} />
+          </button>
+          <ThemeToggle />
+        </div>
       </div>
 
       <OfflineBanner />
 
-      <div className="picker-search">
-        <div className="field">
-          <Icon name="search" size={18} style={{ color: "var(--text-muted)", flex: "none" }} />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search surah, name or number"
-            aria-label="Search surahs by name or number"
-            autoComplete="off"
-          />
+      {searchOpen && (
+        <div className="picker-search">
+          <div className="field">
+            <Icon name="search" size={18} style={{ color: "var(--text-muted)", flex: "none" }} />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search surah, name or number"
+              aria-label="Search surahs by name or number"
+              autoComplete="off"
+            />
+            {query && (
+              <button className="tap" onClick={() => setQuery("")} aria-label="Clear search">
+                <Icon name="x" size={16} style={{ color: "var(--text-muted)" }} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="picker-body">
+      <div className="picker-body" style={{ paddingTop: 0 }}>
         {status === "loading" && (
-          <div className="status-block">
-            <div className="spinner" />
-            <p>Loading surahs…</p>
+          <div className="picker-section" aria-hidden="true">
+            <div className="index-card">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} className="index-row">
+                  <span className="skel" style={{ width: 24, height: 14 }} />
+                  <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span className="skel" style={{ width: "40%", height: 13 }} />
+                    <span className="skel" style={{ width: "60%", height: 10 }} />
+                  </span>
+                  <span className="skel" style={{ width: 40, height: 18 }} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -96,9 +156,7 @@ export default function PickerPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <h2>Can&rsquo;t reach the library</h2>
-              <p>
-                The surah list couldn&rsquo;t be loaded. Check your connection and try again.
-              </p>
+              <p>The surah list couldn&rsquo;t be loaded. Check your connection and try again.</p>
             </div>
             <div className="status-actions">
               <button className="btn-primary" onClick={reload}>
@@ -111,29 +169,75 @@ export default function PickerPage() {
 
         {status === "ready" && (
           <>
-            {recents.length > 0 && (
+            {session && !query && (
+              <section className="hero-card">
+                {streak >= 2 && (
+                  <span className="streak-pill" title={`${streak} days in a row`}>
+                    <Icon name="flame" size={13} />
+                    <span className="num">{streak}</span>
+                  </span>
+                )}
+                <div className="hc-head">
+                  <span className="label-eyebrow" style={{ color: "var(--action-primary)" }}>
+                    Continue
+                  </span>
+                  <span className="hc-title">
+                    <h2>{session.name}</h2>
+                    <span className="ar">
+                      {chapters.find((c) => c.id === session.chapter)?.name_arabic ?? ""}
+                    </span>
+                  </span>
+                  <span className="hc-sub">
+                    Verses {session.from}–{session.to} · {session.reciterName}
+                  </span>
+                </div>
+                <div className="hc-progress">
+                  <div className="hc-track">
+                    <i style={{ width: `${Math.min(100, Math.round((heroDone / heroTotal) * 100))}%` }} />
+                  </div>
+                  <div className="hc-meta">
+                    <span>
+                      {heroDone} of {heroTotal} verses
+                    </span>
+                    <span>{relativeTime(session.updatedAt)}</span>
+                  </div>
+                </div>
+                <Link
+                  className="btn-primary"
+                  style={{ padding: 13 }}
+                  href={openUrl(session.chapter, session.from, session.to, {
+                    at: String(session.verse),
+                    reciter: String(session.reciterId || reciterId || ""),
+                  })}
+                >
+                  <Icon name="play" size={18} />
+                  Resume at verse {session.verse}
+                </Link>
+              </section>
+            )}
+
+            {recents.length > 0 && !query && (
               <section className="picker-section">
-                <span className="label-eyebrow">Recents</span>
-                <div className="picker-list">
-                  {recents.slice(0, 3).map((r) => (
+                <span className="label-eyebrow">Pick up again</span>
+                <div className="chip-row">
+                  {recents.map((r) => (
                     <Link
                       key={`${r.chapter}-${r.from}-${r.to}`}
-                      className="recent-row"
-                      href={`/read/${r.chapter}?from=${r.from}&to=${r.to}${
-                        reciterId != null ? `&reciter=${reciterId}` : ""
-                      }`}
+                      className="recent-chip"
+                      href={openUrl(r.chapter, r.from, r.to, {
+                        at: String(r.verse),
+                        reciter: String(r.reciterId || reciterId || ""),
+                      })}
                     >
-                      <span className="recent-tile">
-                        <Icon name="rotate-ccw" size={18} />
+                      <span className="rc-tile">
+                        <Icon name="rotate-ccw" size={14} />
                       </span>
-                      <span className="recent-text">
+                      <span className="rc-text">
                         <b>
-                          {r.name} {r.from}
-                          {r.to > r.from ? `–${r.to}` : ""}
+                          {r.name} {r.from}–{r.to}
                         </b>
-                        <span>{r.reciter}</span>
+                        <span>{r.reciterName}</span>
                       </span>
-                      <Icon name="play" size={20} style={{ color: "var(--text-secondary)" }} />
                     </Link>
                   ))}
                 </div>
@@ -141,7 +245,13 @@ export default function PickerPage() {
             )}
 
             <section className="picker-section">
-              <span className="label-eyebrow">All surahs</span>
+              <div className="index-head">
+                <span className="label-eyebrow">Surahs</span>
+                <span className="num" style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+                  {filtered.length}
+                </span>
+              </div>
+
               {filtered.length === 0 ? (
                 <div className="status-block" style={{ padding: "32px 8px" }}>
                   <div className="status-medallion">
@@ -158,136 +268,86 @@ export default function PickerPage() {
                   </div>
                 </div>
               ) : (
-                <div className="picker-list">
+                <div className="index-card">
                   {filtered.map((c) => {
                     const isSel = selected === c.id;
                     return (
-                      <div key={c.id} className={`surah-card${isSel ? " sel" : ""}`}>
-                        <button
-                          className="surah-row"
-                          onClick={() => pickChapter(c)}
-                          aria-expanded={isSel}
-                        >
-                          <span className="sn">{c.id}</span>
-                          <span className="stext">
-                            <b>{c.name_simple}</b>
-                            <span>
-                              {c.translated_name?.name} · {c.verses_count} verses
-                            </span>
+                      <button
+                        key={c.id}
+                        className={`index-row${isSel ? " sel" : ""}`}
+                        onClick={() => setSelected(isSel ? null : c.id)}
+                        aria-pressed={isSel}
+                      >
+                        <span className="in">{c.id}</span>
+                        <span className="itext">
+                          <b>{c.name_simple}</b>
+                          <span>
+                            {c.translated_name?.name} · {c.verses_count} verses
                           </span>
-                          <span className="ar">{c.name_arabic}</span>
-                        </button>
-
-                        {isSel && (
-                          <div className="range-panel">
-                            <div className="range-pair">
-                              <label className="range-field">
-                                <span>From verse</span>
-                                <span className="select-box">
-                                  {from}
-                                  <Icon
-                                    name="chevron-down"
-                                    size={15}
-                                    style={{ color: "var(--text-muted)" }}
-                                  />
-                                  <select
-                                    value={from}
-                                    aria-label="From verse"
-                                    onChange={(e) => {
-                                      const v = Number(e.target.value);
-                                      setFrom(v);
-                                      if (to < v) setTo(v);
-                                    }}
-                                  >
-                                    {Array.from({ length: c.verses_count }, (_, i) => i + 1).map((n) => (
-                                      <option key={n} value={n}>
-                                        {n}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </span>
-                              </label>
-                              <label className="range-field">
-                                <span>To verse</span>
-                                <span className="select-box">
-                                  {to}
-                                  <Icon
-                                    name="chevron-down"
-                                    size={15}
-                                    style={{ color: "var(--text-muted)" }}
-                                  />
-                                  <select
-                                    value={to}
-                                    aria-label="To verse"
-                                    onChange={(e) => {
-                                      const v = Number(e.target.value);
-                                      setTo(v);
-                                      if (v < from) setFrom(v);
-                                    }}
-                                  >
-                                    {Array.from({ length: c.verses_count }, (_, i) => i + 1).map((n) => (
-                                      <option key={n} value={n}>
-                                        {n}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </span>
-                              </label>
-                            </div>
-                            <span className="range-help">
-                              {to - from + 1} {to - from + 1 === 1 ? "verse" : "verses"} selected · of{" "}
-                              {c.verses_count}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        </span>
+                        <span className="iar">{c.name_arabic}</span>
+                        <Icon
+                          name="chevron-left"
+                          size={16}
+                          style={{ color: isSel ? "var(--action-primary)" : "var(--text-muted)", flex: "none" }}
+                        />
+                      </button>
                     );
                   })}
                 </div>
               )}
             </section>
 
-            <Link
-              href="/credits"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                fontSize: 11.5,
-                color: "var(--text-muted)",
-                padding: "4px 0 8px",
-                textDecoration: "none",
-              }}
-            >
-              <Icon name="shield-check" size={14} />
-              Quran content is always free to access · Data &amp; attributions
-            </Link>
+            <div className="link-row">
+              <Link href="/credits">Data &amp; attributions</Link>
+              <span aria-hidden="true">·</span>
+              <Link href="/privacy">Privacy</Link>
+            </div>
           </>
         )}
       </div>
 
       {status === "ready" && (
-        <div className="picker-foot">
-          <button className="field" onClick={() => setQariSheet(true)}>
-            <Icon name="mic" size={17} style={{ color: "var(--text-muted)", flex: "none" }} />
-            <span style={{ flex: 1, textAlign: "left", color: "var(--text-primary)" }}>
-              {reciterName(reciterId)}
-            </span>
-            <Icon name="chevron-down" size={16} style={{ color: "var(--text-muted)", flex: "none" }} />
+        <div className="picker-foot" style={{ flexDirection: "row", gap: 10 }}>
+          <button className="qari-compact tap" onClick={() => setQariSheet(true)} aria-label="Change reciter">
+            <Icon name="mic" size={15} style={{ color: "var(--text-muted)", flex: "none" }} />
+            <span>{reciterName(reciterId).split(" ").slice(-1)[0]}</span>
+            <Icon name="chevron-down" size={14} style={{ color: "var(--text-muted)", flex: "none" }} />
           </button>
-          <button className="btn-primary" onClick={open} disabled={!selectedChapter}>
-            <Icon name="play" size={18} />
-            {ctaLabel}
+          <button
+            className="btn-primary"
+            style={{ flex: 1, width: "auto" }}
+            disabled={!selectedChapter}
+            onClick={() => selectedChapter && setPractise(true)}
+          >
+            <Icon name="sliders-horizontal" size={18} />
+            {selectedChapter ? `Set up ${selectedChapter.name_simple}` : "Choose a surah"}
           </button>
         </div>
+      )}
+
+      {practise && selectedChapter && (
+        <PractiseSheet
+          surahName={selectedChapter.name_simple}
+          versesCount={selectedChapter.verses_count}
+          initialFrom={1}
+          initialTo={Math.min(12, selectedChapter.verses_count)}
+          initialMode="verse"
+          taj={taj}
+          onTaj={(on) => {
+            setTaj(on);
+            writeStorage(STORAGE_KEYS.taj, on);
+          }}
+          onStart={startPractise}
+          onClose={() => setPractise(false)}
+        />
       )}
 
       {qariSheet && (
         <Sheet title="Reciter" onClose={() => setQariSheet(false)} maxHeight="80dvh">
           <div className="info-line">
             <Icon name="info" size={13} />
-            Switching mid-playback keeps your place
+            Applies to every passage you open
           </div>
           <div className="sheet-list" style={{ gap: 2 }}>
             {recitations.map((r) => (

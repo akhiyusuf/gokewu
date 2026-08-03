@@ -18,14 +18,15 @@ import {
 import { PlaybackEngine } from "@/lib/engine";
 import { useDismissOnBack } from "@/lib/useDismissOnBack";
 import { useEngineState } from "@/lib/usePlaybackEngine";
+import { recordDay, saveSession } from "@/lib/sessions";
 import type { Mode, RelayParticipant } from "@/lib/types";
 import { PlayerFooter } from "./PlayerFooter";
 import { PlayerHeader } from "./PlayerHeader";
 import { WordPopover, type PopoverTarget } from "./WordPopover";
 import { LayerBar } from "./LayerBar";
 import { ConfusableSheet } from "./sheets/ConfusableSheet";
-import { ModeSheet } from "./sheets/ModeSheet";
 import { PhraseSheet } from "./sheets/PhraseSheet";
+import { PractiseSheet } from "./sheets/PractiseSheet";
 import { QariSheet } from "./sheets/QariSheet";
 import { RelaySetupSheet } from "./sheets/RelaySetupSheet";
 import { FocusView } from "./views/FocusView";
@@ -90,6 +91,9 @@ export function PlayerScreen({
   const cameFromLive = search.get("back") ?? cameFrom;
   const heldAtLive = search.get("held") ? Number(search.get("held")) : heldAt;
   const matchOfLive = search.get("match") ?? matchOf;
+  const gParam = search.get("g");
+  const modeParam = search.get("mode");
+  const atParam = search.get("at");
 
   const { chapters, status: appStatus, reciterId, setReciterId, reciterName, pushRecent } = useAppData();
   const { showToast } = useToast();
@@ -244,6 +248,87 @@ export function PlayerScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, arrived, state.verses.length]);
 
+  // Apply a mode carried in the URL (from the Practise sheet).
+  useEffect(() => {
+    if (load !== "ready") return;
+    const m = modeParam as Mode | null;
+    const valid: Mode[] = ["word", "verse", "masked", "relay"];
+    const target = m && valid.includes(m) ? m : "verse";
+    if (target === engine.getSnapshot().mode) return;
+    engine.setMode(target);
+    if (target === "relay") setRelaySheet(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, modeParam]);
+
+  // Resume position carried in the URL (Continue hero / recents).
+  useEffect(() => {
+    if (load !== "ready" || !atParam) return;
+    const idx = engine.getSnapshot().verses.findIndex((v) => v.number === Number(atParam));
+    if (idx > 0) engine.loadVerseAudio(idx, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, atParam]);
+
+  // Remember where the reader is, so the Read screen can offer to continue.
+  useEffect(() => {
+    if (load !== "ready" || !state.passage) return;
+    const v = state.verses[state.vIdx];
+    const rid = state.reciterId ?? activeReciter;
+    if (!v || rid == null) return;
+    saveSession({
+      chapter,
+      from,
+      to,
+      name: passageName,
+      reciterId: rid,
+      reciterName: reciterName(rid),
+      verse: v.number,
+      updatedAt: Date.now(),
+    });
+    recordDay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, state.vIdx, state.reciterId]);
+
+  // Space toggles playback; arrows step verses (matching the transport layout).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.tagName === "BUTTON" || t.isContentEditable)) return;
+      if (document.querySelector(".sheet, .popover")) return;
+      if (e.key === " ") {
+        e.preventDefault();
+        engine.togglePlay();
+      } else if (e.key === "ArrowRight") {
+        engine.next();
+      } else if (e.key === "ArrowLeft") {
+        engine.prev();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [engine]);
+
+  // Lock-screen / notification controls for a listening app.
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const v = state.verses[state.vIdx];
+    if (!state.passage || !v) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `${state.passage.name} ${v.key}`,
+        artist: reciterName(state.reciterId),
+        album: "Hifz",
+        artwork: [{ src: "/icon-512.png", sizes: "512x512", type: "image/png" }],
+      });
+      navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+      navigator.mediaSession.setActionHandler("play", () => engine.togglePlay());
+      navigator.mediaSession.setActionHandler("pause", () => engine.togglePlay());
+      navigator.mediaSession.setActionHandler("previoustrack", () => engine.prev());
+      navigator.mediaSession.setActionHandler("nexttrack", () => engine.next());
+    } catch {
+      /* older browsers — controls just don't appear */
+    }
+  }, [engine, state.passage, state.vIdx, state.playing, state.reciterId, state.verses, reciterName]);
+
   /* ---- annotation layers ---- */
 
   const annByVerse = useMemo(() => {
@@ -286,6 +371,7 @@ export function PlayerScreen({
     wordTo?: number,
     matchIndex?: number,
     matchTotal?: number,
+    g?: string,
   ) => {
     const [s, v] = verseKey.split(":").map(Number);
     if (!s || !v) return;
@@ -309,12 +395,20 @@ export function PlayerScreen({
     const params = new URLSearchParams({ from: String(ctxFrom), to: String(ctxTo) });
     if (state.reciterId) params.set("reciter", String(state.reciterId));
     if (wf) params.set("focus", `${v}-${wf}-${wt}`);
-    // Carry what the reader is leaving, so the return bar can promise it's held.
-    const p = state.passage;
-    if (p) params.set("back", `${p.name} ${p.from}${p.to > p.from ? `–${p.to}` : ""}`);
-    const heldVerse = state.verses[state.vIdx]?.number;
-    if (heldVerse) params.set("held", String(heldVerse));
+    // Carry what the reader is leaving. When already comparing (stepping
+    // between matches), keep the ORIGINAL origin — Return must go back to the
+    // passage they started from, not to the previous match.
+    if (cameFromLive) {
+      params.set("back", cameFromLive);
+      if (heldAtLive) params.set("held", String(heldAtLive));
+    } else {
+      const p = state.passage;
+      if (p) params.set("back", `${p.name} ${p.from}${p.to > p.from ? `–${p.to}` : ""}`);
+      const heldVerse = state.verses[state.vIdx]?.number;
+      if (heldVerse) params.set("held", String(heldVerse));
+    }
     if (matchIndex && matchTotal) params.set("match", `${matchIndex}-${matchTotal}`);
+    if (g) params.set("g", g);
     /*
      * `replace`, not `push`: the overlay occupies the current history entry, so
      * replacing it means back from the destination lands on the passage the
@@ -443,7 +537,17 @@ export function PlayerScreen({
         style={state.style}
         onStyle={(s) => engine.setStyle(s)}
         onQari={() => setQariSheet(true)}
-        matchLabel={matchOfLive ? `Match ${matchOfLive.split("-")[0]} of ${matchOfLive.split("-")[1]}` : null}
+        matchLabel={
+          arrived && gParam && ann?.groups[gParam]
+            ? (() => {
+                const occ = ann.groups[gParam]!.occ;
+                const i = occ.findIndex((o) => o.k === `${chapter}:${arrived.verse}` && o.f === arrived.from);
+                return i >= 0 ? `Match ${i + 1} of ${occ.length}` : null;
+              })()
+            : matchOfLive
+              ? `Match ${matchOfLive.split("-")[0]} of ${matchOfLive.split("-")[1]}`
+              : null
+        }
         backLabel={cameFromLive ? cameFromLive.split(" ")[0] : null}
         onEditRelay={() => {
           engine.pauseRelayForEdit();
@@ -479,6 +583,60 @@ export function PlayerScreen({
           </button>
         </div>
       )}
+
+      {/* Step through the group's other occurrences without reopening the sheet. */}
+      {arrived && gParam && ann?.groups[gParam] && load === "ready" &&
+        (() => {
+          const occ = ann.groups[gParam]!.occ;
+          const i = occ.findIndex((o) => o.k === `${chapter}:${arrived.verse}` && o.f === arrived.from);
+          if (i < 0) return null;
+          const prev = occ[i - 1];
+          const next = occ[i + 1];
+          return (
+            <div className="arrive-stepper">
+              <button
+                className="icon-btn sm tap"
+                disabled={!prev}
+                onClick={() => prev && goToOccurrence(prev.k, prev.f, prev.t, i, occ.length, gParam)}
+                aria-label="Previous occurrence"
+              >
+                <Icon name="chevron-right" size={19} />
+              </button>
+              <span className="as-text">
+                <b>Step through matches</b>
+                <span>{next ? `Next: ${next.k}` : "Last occurrence"}</span>
+              </span>
+              <button
+                className="icon-btn sm tap"
+                disabled={!next}
+                onClick={() => next && goToOccurrence(next.k, next.f, next.t, i + 2, occ.length, gParam)}
+                aria-label="Next occurrence"
+              >
+                <Icon name="chevron-left" size={19} />
+              </button>
+            </div>
+          );
+        })()}
+
+      {/* Twin arrival: hear the vowels clearly before comparing. */}
+      {arrived && !gParam && cameFromLive && load === "ready" &&
+        (() => {
+          const vIdx = state.verses.findIndex((v) => v.number === arrived.verse);
+          const w = state.verses[vIdx]?.words.find((x) => x.pos === arrived.from);
+          if (!w) return null;
+          return (
+            <div className="arrive-twin">
+              <span className="at-word">
+                <span className="ar">{w.ar}</span>
+                {w.tr && <span className="tr">{w.tr}</span>}
+              </span>
+              <button className="at-play" onClick={() => engine.playWordSlow(vIdx, arrived.from)}>
+                <Icon name="volume-2" size={15} />
+                Play slowly
+              </button>
+            </div>
+          );
+        })()}
 
       {state.pendingLoopStart && !selection && (
         <div className="range-banner">
@@ -595,11 +753,24 @@ export function PlayerScreen({
         })()}
 
       {modeSheet && (
-        <ModeSheet
-          mode={state.mode}
+        <PractiseSheet
+          surahName={passageName}
+          versesCount={chapterMeta?.verses_count ?? to}
+          initialFrom={from}
+          initialTo={to}
+          initialMode={state.mode}
           taj={state.taj}
-          onMode={setMode}
           onTaj={(on) => engine.setTajweed(on)}
+          onStart={(f, t, m) => {
+            setModeSheet(false);
+            const params = new URLSearchParams({ from: String(f), to: String(t) });
+            if (state.reciterId) params.set("reciter", String(state.reciterId));
+            if (m !== "verse") params.set("mode", m);
+            // If only the mode changed, the passage effect's deps don't fire
+            // and the mode param effect switches without a reload.
+            navigatingAway.current = true;
+            router.replace(`/read/${chapter}?${params.toString()}`);
+          }}
           onClose={() => setModeSheet(false)}
         />
       )}

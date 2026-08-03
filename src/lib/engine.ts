@@ -113,6 +113,8 @@ export class PlaybackEngine {
   private pendingWordInit = false;
   private loopEdgeAt = 0;
   private passageToken = 0;
+  /** Rate override for the next one-shot only ("play slowly"). */
+  private oneshotRate: number | null = null;
   private audioByReciter: Record<string, AudioMap> = {};
   private doneVerses = new Set<number>();
 
@@ -149,7 +151,10 @@ export class PlaybackEngine {
     };
     this.snap = { ...this.st };
     if (typeof Audio !== "undefined") {
-      this.audio.preload = "auto";
+      // Honour the browser's data-saver signal: fetch only metadata up front
+      // and let playback stream on demand.
+      const saveData = (navigator as { connection?: { saveData?: boolean } }).connection?.saveData;
+      this.audio.preload = saveData ? "metadata" : "auto";
       this.bindAudioEvents();
     }
   }
@@ -287,7 +292,7 @@ export class PlaybackEngine {
   }
 
   private playAudio() {
-    this.audio.playbackRate = this.st.rate;
+    this.audio.playbackRate = this.oneshotRate ?? this.st.rate;
     const tok = ++this.playToken;
     const p = this.audio.play();
     if (p && p.catch) {
@@ -307,6 +312,7 @@ export class PlaybackEngine {
   }
 
   private pauseAudio() {
+    this.oneshotRate = null;
     if (this.armed) this.armed.play = false;
     this.audio.pause();
     this.clearGap();
@@ -951,6 +957,16 @@ export class PlaybackEngine {
     };
     this.notify();
     this.wordModePlayCurrent();
+  }
+
+  /**
+   * Play a single word once at 0.75× and stop — for hearing a near-twin's
+   * vowels clearly. The reduced rate applies to this one-shot only; the
+   * reader's chosen speed is untouched.
+   */
+  playWordSlow(vIdx: number, wPos: number) {
+    this.oneshotRate = 0.75;
+    this.playWordOneshot(vIdx, wPos);
   }
 
   /** Play a single word once and stop. */

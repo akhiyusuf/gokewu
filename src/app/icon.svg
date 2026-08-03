@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#E8590C"/>
+  <!-- open mushaf -->
+  <path d="M32 18c-4-3-10-4-15-3v28c5-1 11 0 15 3 4-3 10-4 15-3V15c-5-1-11 0-15 3z" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linejoin="round"/>
+  <path d="M32 18v28" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M22 25h6M22 31h6M36 25h6M36 31h6" stroke="#FFF3EA" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

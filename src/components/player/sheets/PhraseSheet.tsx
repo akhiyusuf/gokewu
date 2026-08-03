@@ -25,6 +25,7 @@ export function PhraseSheet({
     wordTo?: number,
     matchIndex?: number,
     matchTotal?: number,
+    groupId?: string,
   ) => void;
   onClose: () => void;
 }) {
@@ -86,7 +87,7 @@ export function PhraseSheet({
                   <button
                     key={`${o.k}-${i}`}
                     className={`occ-row${here ? " here" : ""}`}
-                    onClick={() => !here && onGo(o.k, o.f, o.t, i + 1, group.occ.length)}
+                    onClick={() => !here && onGo(o.k, o.f, o.t, i + 1, group.occ.length, id)}
                     disabled={here}
                   >
                     <span className="ref">{o.k}</span>

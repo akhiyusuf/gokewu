@@ -4,11 +4,30 @@ import type { Chapter, Recitation, Verse } from "./types";
 import { parseSegments } from "./segments";
 import { splitTajweedVerse } from "./tajweed";
 
-async function getJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json() as Promise<T>;
+/**
+ * GET with retry. On the target networks a request dropping mid-flight is
+ * routine, not exceptional — two retries with backoff turn most of those into
+ * a slow success instead of an error screen. Client errors (4xx) don't retry;
+ * the answer won't change.
+ */
+async function getJSON<T>(url: string, tries = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < tries; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (res.ok) return (await res.json()) as T;
+      if (res.status >= 400 && res.status < 500) throw new NoRetryError(`HTTP ${res.status} for ${url}`);
+      lastErr = new Error(`HTTP ${res.status} for ${url}`);
+    } catch (e) {
+      if (e instanceof NoRetryError) throw e;
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
+
+class NoRetryError extends Error {}
 
 /** Cached GET wrapped around localStorage, capped at CONTENT_CACHE_TTL_MS. */
 async function cachedFetch<T>(key: string, url: string, maxAgeMs: number): Promise<T> {

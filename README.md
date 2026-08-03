@@ -27,9 +27,26 @@ npm test         # unit tests for the timing/relay/phrase logic
 
 | Route | Screen |
 |---|---|
-| `/` | Passage picker — search, recents, surah list with an inline range picker |
-| `/read/[chapter]?from=&to=&reciter=` | Player. The passage lives in the URL, so a session is shareable and the back button behaves. |
+| `/` | Read screen — Continue hero (resumes your last session), recents, searchable surah index. Range and mode are chosen in the Practise sheet just before starting. |
+| `/read/[chapter]?from=&to=&reciter=&mode=&at=` | Player. The passage, mode and resume position live in the URL, so a session is shareable and the back button behaves. |
 | `/credits` | Data & attributions (a licensing requirement, not a nicety) |
+| `/privacy` | Privacy policy — no accounts, no analytics, everything stays on-device |
+
+## Release infrastructure
+
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) runs unit tests and the
+  production build on every push. Vercel deploys via its Git integration.
+- **PWA**: web manifest + icons; installable app shell. Offline *content*
+  remains blocked pending Quran Foundation permission.
+- **Caching**: `/data/annotations/*` is served immutable for a year; the fetch
+  URL carries `?v=ANNOTATIONS_VERSION`, bumped when datasets are regenerated.
+- **Sessions**: reading position, recents and the day streak persist in
+  localStorage (`src/lib/sessions.ts`) — the reader's own activity, not API
+  content, so the 7-day limit does not apply.
+- **Error handling**: route and global error boundaries, designed 404, fetch
+  retry with backoff, Save-Data-aware audio preloading.
+- **Media Session**: lock-screen playback controls with passage/reciter
+  metadata.
 
 ## Playback modes
 

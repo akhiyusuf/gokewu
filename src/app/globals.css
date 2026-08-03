@@ -333,6 +333,7 @@ a {
 /* ---------- generic controls ---------- */
 
 .btn-primary {
+  text-decoration: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -361,6 +362,7 @@ a {
 }
 
 .btn-secondary {
+  text-decoration: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2922,4 +2924,496 @@ a {
   color: var(--action-primary);
   font-size: 11px;
   font-weight: 600;
+}
+
+/* ==========================================================================
+   Read screen (v2 picker)
+   ========================================================================== */
+
+.read-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 14px 20px 12px;
+}
+.read-head .rh-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.read-head h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.read-head .rh-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.hero-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 17px;
+  margin: 2px 0 0;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+[data-theme="dark"] .hero-card {
+  box-shadow: none;
+}
+.streak-pill {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(240, 164, 0, 0.14);
+  color: #8a6000;
+}
+[data-theme="dark"] .streak-pill {
+  background: rgba(240, 164, 0, 0.16);
+  color: var(--accent-streak);
+}
+.streak-pill svg {
+  color: var(--accent-streak);
+}
+.streak-pill .num {
+  font-size: 12.5px;
+}
+.hero-card .hc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 62px;
+}
+.hero-card .hc-title {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+.hero-card .hc-title h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 27px;
+  line-height: 1.1;
+}
+.hero-card .hc-title .ar {
+  font-family: var(--font-arabic);
+  font-size: 25px;
+  color: var(--text-secondary);
+  direction: rtl;
+}
+.hero-card .hc-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.hc-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hc-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-alt);
+  overflow: hidden;
+}
+.hc-track i {
+  display: block;
+  height: 100%;
+  background: var(--action-primary);
+  border-radius: var(--radius-pill);
+}
+.hc-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-numeral);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.chip-row {
+  display: flex;
+  gap: 9px;
+}
+.recent-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  text-decoration: none;
+}
+.recent-chip .rc-tile {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-surface-alt);
+  color: var(--action-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.recent-chip .rc-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.recent-chip .rc-text b {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-chip .rc-text span {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.index-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.index-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+.index-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+}
+.index-row + .index-row {
+  border-top: 1px solid var(--border-default);
+}
+.index-row .in {
+  width: 24px;
+  text-align: center;
+  font-family: var(--font-numeral);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-muted);
+  flex: none;
+}
+.index-row .itext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.index-row .itext b {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.index-row .itext span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.index-row .iar {
+  font-family: var(--font-arabic);
+  font-size: 21px;
+  color: var(--text-secondary);
+  direction: rtl;
+}
+.index-row.sel {
+  background: var(--tint-primary-06);
+}
+.index-row.sel .in,
+.index-row.sel .iar {
+  color: var(--action-primary);
+}
+.index-row.sel .itext b {
+  font-weight: 700;
+  color: var(--action-primary);
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 0 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.link-row a {
+  text-decoration: none;
+  color: inherit;
+}
+.link-row a:hover {
+  color: var(--text-secondary);
+}
+
+.qari-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 12px;
+  border-radius: var(--radius-button);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border-default);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  flex: none;
+  max-width: 40%;
+}
+.qari-compact > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* practise sheet verse fields + presets */
+.verse-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 11px;
+  border-radius: var(--radius-button);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+}
+.verse-field > span:first-child {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.verse-field .vf-value {
+  flex: 1;
+  font-family: var(--font-numeral);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+.verse-field select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.preset-chip {
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border-default);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.preset-chip.on {
+  background: var(--action-primary);
+  border-color: var(--action-primary);
+  color: var(--text-on-primary);
+  font-weight: 700;
+}
+
+/* ---------- arrival study extras ---------- */
+
+.arrive-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 16px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-card);
+  background: var(--layer-recurring-wash);
+  border: 1px solid var(--layer-recurring-border);
+}
+.arrive-stepper .as-text {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+.arrive-stepper .as-text b {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.arrive-stepper .as-text span {
+  font-family: var(--font-numeral);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.arrive-twin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 16px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-card);
+  background: var(--layer-confusable-wash);
+  border: 1px solid var(--layer-confusable-border);
+}
+.arrive-twin .at-word {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.arrive-twin .at-word .ar {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+.arrive-twin .at-word .tr {
+  font-family: var(--font-numeral);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--layer-confusable);
+}
+.arrive-twin .at-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-button);
+  border: 1px solid var(--layer-confusable-border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  flex: none;
+}
+
+/* ---------- skeletons ---------- */
+
+.skel {
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-surface-alt) 25%, var(--border-default) 50%, var(--bg-surface-alt) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- desktop sidebar ---------- */
+
+.app-sidebar {
+  display: none;
+}
+@media (min-width: 1440px) {
+  .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 248px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 24px 16px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-default);
+    z-index: 10;
+  }
+  .shell {
+    margin-left: 248px;
+  }
+  .toast-region {
+    margin-left: 124px;
+  }
+}
+.app-sidebar .as-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 6px;
+}
+.app-sidebar .as-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--action-primary);
+  color: var(--text-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.app-sidebar .as-name {
+  display: flex;
+  flex-direction: column;
+}
+.app-sidebar .as-name b {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.1;
+}
+.app-sidebar .as-name span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.app-sidebar .as-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.app-sidebar .as-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.app-sidebar .as-item:hover {
+  background: var(--bg-surface-alt);
+}
+.app-sidebar .as-item.on {
+  background: var(--tint-primary-08);
+  color: var(--action-primary);
+  font-weight: 600;
+}
+.app-sidebar .as-foot {
+  margin-top: auto;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
 }

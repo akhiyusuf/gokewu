@@ -40,8 +40,10 @@ export function useDismissOnBack(
 
     return () => {
       window.removeEventListener("popstate", onPop);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional live read: the flag is set moments before unmount
       if (navigatingAway?.current) return;
       if (ours && window.history.state?.__overlay === token) window.history.back();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 }
