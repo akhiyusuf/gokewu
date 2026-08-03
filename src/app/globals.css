@@ -1385,7 +1385,62 @@ a {
   color: var(--text-secondary);
 }
 
-/* tajweed rule palette — a recognised convention, not a style choice */
+/* Tajweed rule palette — a recognised convention, not a style choice.
+   Routed through custom properties so highlighted words (current / pending /
+   arrived, which sit on an orange tint) can swap in intensified variants of
+   the same hue where the base colour drops under 3:1 against the deepest
+   (28%) tint. Ratios are measured, not eyeballed — contrast.js in the
+   session scratchpad recomputes them if the tint or palette changes. */
+:root {
+  --tjc-silent: #9a958c;
+  --tjc-madda-normal: #537fff;
+  --tjc-madda-permissible: #4050ff;
+  --tjc-madda-necessary: #0018c9;
+  --tjc-madda-obligatory: #2144c1;
+  --tjc-qalaqah: #dd0008;
+  --tjc-ikhafa: #9400a8;
+  --tjc-ikhafa-shafawi: #d500b7;
+  --tjc-idgham-shafawi: #58b800;
+  --tjc-idgham-ghunnah: #169777;
+  --tjc-idgham-wo-ghunnah: #169200;
+  --tjc-iqlab: #26bffd;
+  --tjc-ghunnah: #ff7e1e;
+}
+[data-theme="dark"] {
+  --tjc-madda-normal: #6fa0ff;
+  --tjc-madda-permissible: #7b8cff;
+  --tjc-madda-necessary: #7b8cff;
+  --tjc-madda-obligatory: #8fa0ff;
+  --tjc-ikhafa: #d07bff;
+  --tjc-idgham-wo-ghunnah: #7ed957;
+  --tjc-ghunnah: #e5a93a;
+}
+/* on the highlight tint: darker in light theme… */
+.w.cur,
+.w.pending,
+.w.arrived {
+  --tjc-silent: #6e6960;
+  --tjc-madda-normal: #2b56e8;
+  --tjc-idgham-shafawi: #3d7d00;
+  --tjc-idgham-ghunnah: #0b6e55;
+  --tjc-idgham-wo-ghunnah: #0e6b00;
+  --tjc-iqlab: #0079b6;
+  --tjc-ghunnah: #a83e00;
+}
+/* …brighter in dark theme (and back to base where base already passes) */
+[data-theme="dark"] .w.cur,
+[data-theme="dark"] .w.pending,
+[data-theme="dark"] .w.arrived {
+  --tjc-silent: #9a958c;
+  --tjc-madda-normal: #6fa0ff;
+  --tjc-idgham-shafawi: #58b800;
+  --tjc-idgham-wo-ghunnah: #7ed957;
+  --tjc-iqlab: #26bffd;
+  --tjc-ghunnah: #e5a93a;
+  --tjc-qalaqah: #ff5f57;
+  --tjc-ikhafa-shafawi: #ff5fd8;
+  --tjc-idgham-ghunnah: #25c795;
+}
 .tj {
   font-style: normal;
 }
@@ -1393,64 +1448,46 @@ a {
 .tj-slnt,
 .tj-silent,
 .tj-laam_shamsiyah {
-  color: #9a958c;
+  color: var(--tjc-silent);
 }
 .tj-madda_normal {
-  color: #537fff;
+  color: var(--tjc-madda-normal);
 }
 .tj-madda_permissible {
-  color: #4050ff;
+  color: var(--tjc-madda-permissible);
 }
 .tj-madda_necessary {
-  color: #0018c9;
+  color: var(--tjc-madda-necessary);
 }
 .tj-madda_obligatory,
+.tj-madda_obligatory_monfasel,
+.tj-madda_obligatory_mottasel,
 .tj-madda_pbligatory {
-  color: #2144c1;
+  color: var(--tjc-madda-obligatory);
 }
 .tj-qalaqah {
-  color: #dd0008;
+  color: var(--tjc-qalaqah);
 }
 .tj-ikhafa {
-  color: #9400a8;
+  color: var(--tjc-ikhafa);
 }
 .tj-ikhafa_shafawi {
-  color: #d500b7;
+  color: var(--tjc-ikhafa-shafawi);
 }
 .tj-idgham_shafawi {
-  color: #58b800;
+  color: var(--tjc-idgham-shafawi);
 }
 .tj-idgham_ghunnah {
-  color: #169777;
+  color: var(--tjc-idgham-ghunnah);
 }
 .tj-idgham_wo_ghunnah {
-  color: #169200;
+  color: var(--tjc-idgham-wo-ghunnah);
 }
 .tj-iqlab {
-  color: #26bffd;
+  color: var(--tjc-iqlab);
 }
 .tj-ghunnah {
-  color: #ff7e1e;
-}
-[data-theme="dark"] .tj-madda_necessary,
-[data-theme="dark"] .tj-madda_permissible {
-  color: #7b8cff;
-}
-[data-theme="dark"] .tj-madda_obligatory,
-[data-theme="dark"] .tj-madda_pbligatory {
-  color: #8fa0ff;
-}
-[data-theme="dark"] .tj-ikhafa {
-  color: #d07bff;
-}
-[data-theme="dark"] .tj-idgham_wo_ghunnah {
-  color: #7ed957;
-}
-[data-theme="dark"] .tj-madda_normal {
-  color: #6fa0ff;
-}
-[data-theme="dark"] .tj-ghunnah {
-  color: #e5a93a;
+  color: var(--tjc-ghunnah);
 }
 
 /* ---------- footer / transport ---------- */
